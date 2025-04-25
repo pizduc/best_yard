@@ -25,12 +25,11 @@ const db = new Client({
   database: process.env.DB_NAME,
 });
 
-db.connect((err) => {
-  if (err) {
-    console.error("❌ Ошибка подключения к БД:", err);
-    process.exit(1); // Завершаем процесс, если не удалось подключиться
-  }
+db.connect().then(() => {
   console.log("✅ Подключено к PostgreSQL");
+}).catch((err) => {
+  console.error("❌ Ошибка подключения к БД:", err);
+  process.exit(1); // Завершаем процесс, если не удалось подключиться
 });
 
 // Настройка SMTP для отправки email
