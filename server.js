@@ -1,5 +1,5 @@
 import express from "express";
-import mysql from "mysql2";
+import { Client } from "pg";  // Используем библиотеку pg для PostgreSQL
 import cors from "cors";
 import bodyParser from "body-parser";
 import nodemailer from "nodemailer";
@@ -16,9 +16,10 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({ origin: "http://localhost:8080" }));
 app.use(express.json());
 
-// Подключение к MySQL
-const db = mysql.createConnection({
+// Подключение к PostgreSQL
+const db = new Client({
   host: process.env.DB_HOST,
+  port: process.env.DB_PORT || 5432,  // Убедитесь, что порт правильный
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
@@ -29,7 +30,7 @@ db.connect((err) => {
     console.error("❌ Ошибка подключения к БД:", err);
     process.exit(1); // Завершаем процесс, если не удалось подключиться
   }
-  console.log("✅ Подключено к MySQL");
+  console.log("✅ Подключено к PostgreSQL");
 });
 
 // Настройка SMTP для отправки email
@@ -51,7 +52,7 @@ app.post("/api/applications", (req, res) => {
     return res.status(400).json({ error: "Все поля должны быть заполнены!" });
   }
 
-  const sql = "INSERT INTO Applications (name, email, number, address, description) VALUES (?, ?, ?, ?, ?)";
+  const sql = "INSERT INTO applications (name, email, number, address, description) VALUES ($1, $2, $3, $4, $5)";
   db.query(sql, [name, email, number, address, description], (err, result) => {
     if (err) {
       console.error("❌ Ошибка записи в базу данных:", err);
