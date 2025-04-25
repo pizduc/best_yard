@@ -1,5 +1,5 @@
 import express from "express";
-import { Client } from "pg";  // Используем библиотеку pg для PostgreSQL
+import { Pool } from "pg";  // Используем пакет pg для подключения к PostgreSQL
 import cors from "cors";
 import bodyParser from "body-parser";
 import nodemailer from "nodemailer";
@@ -17,30 +17,30 @@ app.use(cors({ origin: "http://localhost:8080" }));
 app.use(express.json());
 
 // Подключение к PostgreSQL
-const db = new Client({
+const db = new Pool({
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 5432,
+  port: Number(process.env.DB_PORT),
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   ssl: {
-    rejectUnauthorized: false, // Для обхода проверки SSL-сертификатов
+    rejectUnauthorized: false,  // Включаем SSL для безопасного подключения
   },
 });
 
-
-db.connect().then(() => {
+db.connect((err) => {
+  if (err) {
+    console.error("❌ Ошибка подключения к БД:", err);
+    process.exit(1);  // Завершаем процесс, если не удалось подключиться
+  }
   console.log("✅ Подключено к PostgreSQL");
-}).catch((err) => {
-  console.error("❌ Ошибка подключения к БД:", err);
-  process.exit(1); // Завершаем процесс, если не удалось подключиться
 });
 
 // Настройка SMTP для отправки email
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: process.env.SMTP_PORT,
-  secure: process.env.SMTP_PORT == 465, // Автоматическое определение secure
+  secure: process.env.SMTP_PORT == 465,  // Автоматическое определение secure
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
