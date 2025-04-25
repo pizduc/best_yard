@@ -19,11 +19,15 @@ app.use(express.json());
 // Подключение к PostgreSQL
 const db = new Client({
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 5432,  // Убедитесь, что порт правильный
+  port: process.env.DB_PORT || 5432,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  ssl: {
+    rejectUnauthorized: false, // Для обхода проверки SSL-сертификатов
+  },
 });
+
 
 db.connect().then(() => {
   console.log("✅ Подключено к PostgreSQL");
