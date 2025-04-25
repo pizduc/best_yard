@@ -18,6 +18,8 @@ const ParticipationSection = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFioLoading, setIsFioLoading] = useState(false);
 
+  const apiUrl = "https://best-yard.onrender.com/api"; // Продакшн URL
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormState((prev) => ({ ...prev, [name]: value }));
@@ -35,12 +37,13 @@ const ParticipationSection = () => {
   const fetchSuggestions = async (query: string) => {
     setIsLoading(true);
     try {
-      const response = await axios.get("http://localhost:8096/api/suggest", {
+      const response = await axios.get(`${apiUrl}/suggest`, {
         params: { query, type: "geo" },
       });
+      console.log("Ответ на запрос подсказок адреса:", response);
       setSuggestions(response.status === 200 ? response.data.suggestions : []);
     } catch (error) {
-      console.error("Ошибка при запросе подсказок адреса:", error);
+      console.error("Ошибка при запросе подсказок адреса:", error.response ? error.response.data : error.message);
       setSuggestions([]);
     } finally {
       setIsLoading(false);
@@ -51,12 +54,13 @@ const ParticipationSection = () => {
   const fetchFioSuggestions = async (query: string) => {
     setIsFioLoading(true);
     try {
-      const response = await axios.get("http://localhost:8096/api/suggest-fio", {
+      const response = await axios.get(`${apiUrl}/suggest-fio`, {
         params: { query },
       });
+      console.log("Ответ на запрос подсказок ФИО:", response);
       setFioSuggestions(response.status === 200 ? response.data.suggestions.map(s => s.value) : []);
     } catch (error) {
-      console.error("Ошибка при запросе подсказок ФИО:", error);
+      console.error("Ошибка при запросе подсказок ФИО:", error.response ? error.response.data : error.message);
       setFioSuggestions([]);
     } finally {
       setIsFioLoading(false);
@@ -73,19 +77,15 @@ const ParticipationSection = () => {
     setFormState((prev) => ({ ...prev, submitting: true }));
 
     try {
-      const response = await fetch("http://localhost:8096/api/applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formState.name.trim(),
-          email: formState.email.trim(),
-          number: formState.number.trim(),
-          address: formState.address.trim(),
-          description: formState.description.trim(),
-        }),
+      const response = await axios.post(`${apiUrl}/applications`, {
+        name: formState.name.trim(),
+        email: formState.email.trim(),
+        number: formState.number.trim(),
+        address: formState.address.trim(),
+        description: formState.description.trim(),
       });
 
-      if (!response.ok) {
+      if (formState.submitted === true) {
         throw new Error(`Ошибка сервера: ${response.status}`);
       }
 
@@ -99,7 +99,7 @@ const ParticipationSection = () => {
         submitting: false,
       });
     } catch (error) {
-      console.error("Ошибка отправки формы:", error);
+      console.error("Ошибка отправки формы:", error.response ? error.response.data : error.message);
       setFormState((prev) => ({ ...prev, submitting: false }));
     }
   };
