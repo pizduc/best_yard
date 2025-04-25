@@ -1,31 +1,36 @@
-import mysql from 'mysql2/promise';
+import pkg from 'pg';
+const { Client } = pkg;
 
-const connection = await mysql.createConnection({
-    host: 'localhost',
-    user: 'root', // Укажите своего пользователя
-    password: '121032', // Укажите пароль, если есть
-    multipleStatements: true
+const client = new Client({
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
 });
 
 const sql = `
-    CREATE DATABASE IF NOT EXISTS competition;
-    USE competition;
-    CREATE TABLE IF NOT EXISTS applications (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        number VARCHAR(50) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        address TEXT NOT NULL,
-        description TEXT NOT NULL,
-        date DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+  CREATE TABLE IF NOT EXISTS applications (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    number VARCHAR(50) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    address TEXT NOT NULL,
+    description TEXT NOT NULL,
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
 `;
 
-try {
-    await connection.query(sql);
-    console.log("База данных и таблица успешно созданы!");
-} catch (err) {
-    console.error("Ошибка при создании базы данных и таблицы:", err);
-} finally {
-    await connection.end();
+async function setup() {
+  try {
+    await client.connect();
+    await client.query(sql);
+    console.log("Таблица успешно создана в PostgreSQL!");
+  } catch (err) {
+    console.error("Ошибка при создании таблицы:", err);
+  } finally {
+    await client.end();
+  }
 }
+
+setup();
