@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -105,6 +104,33 @@ export default {
 						opacity: '1',
 						transform: 'scale(1)'
 					}
+				},
+				'float': {
+					'0%, 100%': { 
+						transform: 'translateY(0)' 
+					},
+					'50%': { 
+						transform: 'translateY(-10px)' 
+					}
+				},
+				'pulse-soft': {
+					'0%, 100%': { 
+						opacity: '1' 
+					},
+					'50%': { 
+						opacity: '0.8' 
+					}
+				},
+				'gradient-animation': {
+					'0%': { 
+						backgroundPosition: '0% 50%'
+					},
+					'50%': { 
+						backgroundPosition: '100% 50%'
+					},
+					'100%': { 
+						backgroundPosition: '0% 50%'
+					}
 				}
 			},
 			animation: {
@@ -112,7 +138,19 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.6s ease-out',
 				'fade-up': 'fade-up 0.7s ease-out',
-				'scale-in': 'scale-in 0.5s ease-out'
+				'scale-in': 'scale-in 0.5s ease-out',
+				'float': 'float 6s ease-in-out infinite',
+				'pulse-soft': 'pulse-soft 3s ease-in-out infinite',
+				'gradient-animation': 'gradient-animation 10s ease infinite'
+			},
+			backgroundImage: {
+				'hero-pattern': "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMxODRFNzciIGZpbGwtb3BhY2l0eT0iMC4wNCIgc3Ryb2tlPSIjMTg0RTc3IiBzdHJva2Utb3BhY2l0eT0iMC4wMiI+PHBhdGggZD0iTTM2IDM0djZoNnYtNmgtNnptNiA2djZoNnYtNmgtNnptLTEyIDBoNnY2aC02di02em0xMiAwaDZ2NmgtNnYtNnoiLz48L2c+PC9nPjwvc3ZnPg==')",
+				'gradient-primary': 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
+				'gradient-secondary': 'linear-gradient(90deg, rgb(254,100,121) 0%, rgb(251,221,186) 100%)'
+			},
+			boxShadow: {
+				'soft': '0 5px 30px -10px rgba(0, 0, 0, 0.1)',
+				'glow': '0 0 15px rgba(var(--primary-rgb), 0.5)'
 			}
 		}
 	},

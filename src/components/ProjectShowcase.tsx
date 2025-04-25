@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { ArrowRight, Award } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -11,64 +10,71 @@ type Project = {
   image: string;
   year: number;
   isWinner?: boolean;
+  link: string; // Добавлено поле для ссылки
 };
 
 const ProjectShowcase = () => {
   const [selectedYear, setSelectedYear] = useState<number>(2023);
   
-  const years = [2023, 2022, 2021, 2020];
+  const years = [2024, 2023, 2022, 2021, 2020];
   
   const projects: Project[] = [
     {
       id: 1,
-      title: 'Зеленый оазис',
-      address: 'ул. Весенняя, 28',
+      title: 'ЖК "ЮЖНЫЙ"',
+      address: 'ул. Дружбы, 28/4',
       description: 'Комплексное озеленение с созданием зон отдыха и детской площадки, установкой скамеек и освещения.',
-      image: 'https://images.unsplash.com/photo-1556800572-1b8aeef2c54f',
+      image: 'https://images.cdn-cian.ru/images/6/694/257/yuzhnyy-kemerovo-jk-752496632-6.jpg',
       year: 2023,
-      isWinner: true
+      isWinner: true,
+      link: 'https://южный-кемерово.рф/', 
     },
     {
       id: 2,
-      title: 'Спортивный двор',
-      address: 'пр. Ленина, 45',
+      title: 'ЖК "Чемпион Парк"',
+      address: 'ул. Институтская',
       description: 'Создание спортивной площадки с тренажерами, обновление дорожек и установка новых лавочек.',
-      image: 'https://images.unsplash.com/photo-1572807348611-d947f87e5e1a',
-      year: 2023
+      image: 'https://avatars.mds.yandex.net/get-altay/10953738/2a0000018bc1d4aef79ca81ad0fde1ee9072/orig',
+      year: 2023,
+      link: 'https://жк-чемпионпарк.рф/?utm_source=yandex&utm_medium=cpc&utm_campaign=chempion_park_brend&type=search&source=none&block=premium&position=1&campaign=104243768&ad=15617115704&phrase=49227936991&utm_term=жк%20чемпион%20парк&roistat=direct10_search_15617115704_жк%20чемпион%20парк&roistat_referrer=none&roistat_pos=premium_1&yclid=8274315248081567743', 
     },
     {
       id: 3,
-      title: 'Уютный квартал',
-      address: 'ул. Красная, 12',
+      title: 'ЖК "Уютный квартал"',
+      address: 'ул. Терешковой',
       description: 'Обновление детской площадки, установка беседок и создание зоны для барбекю.',
-      image: 'https://images.unsplash.com/photo-1558474798-9579d527b4d7',
-      year: 2023
+      image: 'https://avatars.mds.yandex.net/get-verba/997355/2a000001860d05b0fdde005e14ac9546833f/realty_large_1242',
+      year: 2023,
+      link: 'https://жк-уютныйквартал.рф/?utm_source=yandex&utm_medium=cpc&utm_campaign=uyutnyj_kvartal_poisk&type=search&source=none&block=premium&position=1&campaign=104199183&ad=15617690785&phrase=49230978119&utm_term=жк%20уютный%20квартал&roistat=direct9_search_15617690785_жк%20уютный%20квартал&roistat_referrer=none&roistat_pos=premium_1&yclid=16019355959853842431', 
     },
     {
       id: 4,
-      title: 'Цветущий двор',
-      address: 'ул. Строителей, 7',
+      title: 'ЖК "Парковый"',
+      address: 'пр. Молодежный',
       description: 'Создание ландшафтных композиций, обновление дорожек и установка современного освещения.',
-      image: 'https://images.unsplash.com/photo-1487958449943-2429e8be8625',
+      image: 'https://images.cdn-cian.ru/images/parkovyy-kemerovo-jk-2328802522-7.jpg',
       year: 2022,
-      isWinner: true
+      isWinner: true,
+      link: 'https://жк-парковый.рф/?utm_source=yandex&utm_medium=cpc&utm_medium=cpc&utm_campaign=parkovyj_poisk&utm_content=16900450506&utm_term=---autotargeting&roistat=direct8_search_16900450506_---autotargeting&roistat_referrer=none&roistat_pos=premium_2&yclid=4683006103704829951', 
     },
     {
       id: 5,
-      title: 'Семейный уголок',
-      address: 'ул. Гагарина, 34',
+      title: 'ЖК "Семейный квартал "Весная""',
+      address: 'ул. 1-я Линия',
       description: 'Создание зон отдыха для разных возрастов, установка игровых элементов и озеленение территории.',
-      image: 'https://images.unsplash.com/photo-1622963931881-8b505d4c5cf6',
-      year: 2022
+      image: 'https://images.cdn-cian.ru/images/semeynyy-kvartal-vesna-kemerovo-jk-2180768028-7.jpg',
+      year: 2022,
+      link: 'https://наш.дом.рф/сервисы/каталог-новостроек/объект/51059', 
     },
     {
       id: 6,
-      title: 'Экодвор',
-      address: 'пр. Шахтеров, 19',
+      title: 'ЖК "Верхний бульвар"',
+      address: 'бул. Строителей',
       description: 'Применение экологичных материалов, создание вертикального озеленения и точек раздельного сбора мусора.',
-      image: 'https://images.unsplash.com/photo-1493246318656-5bfd4cfb29b8',
+      image: 'https://images.cdn-cian.ru/images/63/667/231/verhniy-bulvar-kemerovo-jk-1327663686-7.jpg',
       year: 2021,
-      isWinner: true
+      isWinner: true,
+      link: 'https://www.progrand.ru/projects/vb2q/', 
     }
   ];
   
@@ -133,7 +139,6 @@ const ProjectShowcase = () => {
                   </div>
                 )}
               </div>
-              
               <div className="p-6">
                 <div className="text-sm text-muted-foreground mb-2">
                   {project.address}
@@ -143,8 +148,10 @@ const ProjectShowcase = () => {
                   {project.description}
                 </p>
                 <a
-                  href={`#project-${project.id}`}
+                  href={project.link}  // Ссылка на уникальную страницу проекта
                   className="mt-4 inline-flex items-center text-primary font-medium group-hover:underline"
+                  target="_blank"  // Открывает в новой вкладке
+                  rel="noopener noreferrer"
                 >
                   Подробнее
                   <ArrowRight size={16} className="ml-1 transition-transform group-hover:translate-x-1" />
