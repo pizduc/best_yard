@@ -136,7 +136,7 @@ app.get("/api/suggest-fio", async (req, res) => {
   }
 });
 
-const buildPath = path.join(__dirname, '..', 'dist');
+const buildPath = path.resolve(__dirname, process.env.NODE_ENV === 'production' ? 'dist' : '../dist');
 
 app.use(express.static(buildPath));
 
