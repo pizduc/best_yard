@@ -136,12 +136,12 @@ app.get("/api/suggest-fio", async (req, res) => {
   }
 });
 
-// Обслуживание статических файлов из build
-app.use(express.static(path.join(__dirname, 'build')));
+// Обслуживание статических файлов из корня проекта
+app.use(express.static(__dirname));
 
 // В случае, если не найдено другого маршрута, отдаём index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Старт сервера
