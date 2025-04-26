@@ -1,19 +1,29 @@
 import express from "express";
-import { Pool } from "pg";  // Используем пакет pg для подключения к PostgreSQL
+import { Pool } from "pg";
 import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import axios from "axios";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
-console.log("🚀 Сервер перезапущен и готов к работе!");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.use(cors({ origin: "http://localhost:8080" }));
+// Настройки CORS
+app.use(cors({
+  origin: ["http://localhost:8080", "https://best-yard.onrender.com"], // тут укажешь свой домен
+}));
+
 app.use(express.json());
+
+// Статика (React build)
+app.use(express.static(path.join(__dirname, "build")));
 
 // Подключение к PostgreSQL
 const db = new Pool({
@@ -22,31 +32,29 @@ const db = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  ssl: {
-    rejectUnauthorized: false,  // Включаем SSL для безопасного подключения
-  },
+  ssl: { rejectUnauthorized: false },
 });
 
 db.connect((err) => {
   if (err) {
     console.error("❌ Ошибка подключения к БД:", err);
-    process.exit(1);  // Завершаем процесс, если не удалось подключиться
+    process.exit(1);
   }
   console.log("✅ Подключено к PostgreSQL");
 });
 
-// Настройка SMTP для отправки email
+// Настройка SMTP для отправки писем
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: process.env.SMTP_PORT == 465,  // Автоматическое определение secure
+  port: Number(process.env.SMTP_PORT),
+  secure: process.env.SMTP_PORT == 465,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
 });
 
-// API для подачи заявки
+// API: Приём заявок
 app.post("/api/applications", (req, res) => {
   const { name, email, number, address, description } = req.body;
 
@@ -54,34 +62,38 @@ app.post("/api/applications", (req, res) => {
     return res.status(400).json({ error: "Все поля должны быть заполнены!" });
   }
 
-  const sql = "INSERT INTO applications (name, email, number, address, description) VALUES ($1, $2, $3, $4, $5)";
-  db.query(sql, [name, email, number, address, description], (err, result) => {
+  const sql = `
+    INSERT INTO applications (name, email, number, address, description)
+    VALUES ($1, $2, $3, $4, $5)
+  `;
+
+  db.query(sql, [name, email, number, address, description], (err) => {
     if (err) {
-      console.error("❌ Ошибка записи в базу данных:", err);
+      console.error("❌ Ошибка записи в БД:", err);
       return res.status(500).json({ error: "Ошибка сервера" });
     }
 
     res.json({ message: "Заявка принята!" });
 
-    // Асинхронно отправляем email (не блокируем основной поток)
+    // Отправка письма пользователю
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: email,
       subject: "Подтверждение заявки",
-      text: `Здравствуйте, ${name}!\n\nВаша заявка принята.\n\nДетали:\n- Адрес: ${address}\n- Телефон: ${number}\n- Описание: ${description}\n\nМы свяжемся с вами.\n\nС уважением,\nОрганизаторы конкурса.`,
+      text: `Здравствуйте, ${name}!\n\nВаша заявка принята.\n\nДетали:\n- Адрес: ${address}\n- Телефон: ${number}\n- Описание: ${description}\n\nМы свяжемся с вами.\n\nС уважением, команда.`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
-        console.error("❌ Ошибка отправки email:", error);
+        console.error("❌ Ошибка отправки письма:", error);
       } else {
-        console.log("📩 Email отправлен:", info.response);
+        console.log("📩 Письмо отправлено:", info.response);
       }
     });
   });
 });
 
-// Подсказки (Geo Suggest)
+// API: Подсказки адресов через Яндекс
 app.get("/api/suggest", async (req, res) => {
   const { query, type } = req.query;
 
@@ -99,19 +111,15 @@ app.get("/api/suggest", async (req, res) => {
       },
     });
 
-    console.log("✅ Ответ от Яндекс API:", response.data);
-    const suggestions = response.data.results.map((item) => item.title.text);
+    const suggestions = response.data.results.map(item => item.title.text);
     res.json({ suggestions });
   } catch (error) {
-    console.error("❌ Ошибка при запросе к Яндекс API:", error.message);
-    if (error.response) {
-      console.error("Ответ ошибки от Яндекс API:", error.response.data);
-    }
+    console.error("❌ Ошибка Яндекс API:", error.message);
     res.status(500).json({ error: "Ошибка при запросе к Яндекс API" });
   }
 });
 
-// Подсказка ФИО через Dadata
+// API: Подсказки ФИО через Dadata
 app.get("/api/suggest-fio", async (req, res) => {
   const { query } = req.query;
 
@@ -130,24 +138,20 @@ app.get("/api/suggest-fio", async (req, res) => {
       }
     );
 
-    console.log("✅ Ответ от Dadata:", response.data);
     const suggestions = Array.isArray(response.data.suggestions) ? response.data.suggestions : [];
     res.json({ suggestions });
   } catch (error) {
-    console.error("❌ Ошибка при запросе к Dadata API:", error.message);
-    if (error.response) {
-      console.error("Ответ ошибки от Dadata API:", error.response.data);
-    }
+    console.error("❌ Ошибка Dadata API:", error.message);
     res.status(500).json({ error: "Ошибка при запросе к Dadata API" });
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("Главная страница");
+// Фронтенд: Любой другой маршрут — возвращаем index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
-
 
 // Запуск сервера
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
+  console.log(`🚀 Сервер запущен на порту ${PORT}`);
 });
