@@ -10,6 +10,7 @@ import config from "./config.js"; // Подключаем конфиг
 
 dotenv.config();
 
+// Получаем путь к текущему файлу и директории
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -21,6 +22,7 @@ app.use(cors({
   origin: config.cors.origins,
 }));
 
+// Настройка для обработки JSON
 app.use(express.json());
 
 // Подключение к БД
@@ -134,9 +136,12 @@ app.get("/api/suggest-fio", async (req, res) => {
   }
 });
 
-// Фронтенд: Любой другой маршрут — возвращаем index.html из корня
+// Обслуживание статических файлов (React приложение после сборки)
+app.use(express.static(path.join(__dirname, 'build')));
+
+// Обслуживание index.html для всех остальных запросов
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 // Старт сервера
