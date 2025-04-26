@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import axios from "axios";
 import path from "path";
 import { fileURLToPath } from "url";
+import config from "./config.js"; // Подключаем конфиг
 
 dotenv.config();
 
@@ -13,28 +14,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const db = new Pool(config.db);
 
 // Настройки CORS
 app.use(cors({
-  origin: ["http://localhost:8080", "https://best-yard.onrender.com"], // тут укажешь свой домен
+  origin: config.cors.origins,
 }));
 
 app.use(express.json());
 
-// Статика (React build)
-app.use(express.static(path.join(__dirname, "build")));
-
-// Подключение к PostgreSQL
-const db = new Pool({
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  ssl: { rejectUnauthorized: false },
-});
-
+// Подключение к БД
 db.connect((err) => {
   if (err) {
     console.error("❌ Ошибка подключения к БД:", err);
@@ -43,14 +32,14 @@ db.connect((err) => {
   console.log("✅ Подключено к PostgreSQL");
 });
 
-// Настройка SMTP для отправки писем
+// Настройка отправки почты
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: process.env.SMTP_PORT == 465,
+  host: config.smtp.host,
+  port: config.smtp.port,
+  secure: config.smtp.port === 465,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: config.smtp.user,
+    pass: config.smtp.pass,
   },
 });
 
@@ -75,9 +64,8 @@ app.post("/api/applications", (req, res) => {
 
     res.json({ message: "Заявка принята!" });
 
-    // Отправка письма пользователю
     const mailOptions = {
-      from: process.env.SMTP_USER,
+      from: config.smtp.user,
       to: email,
       subject: "Подтверждение заявки",
       text: `Здравствуйте, ${name}!\n\nВаша заявка принята.\n\nДетали:\n- Адрес: ${address}\n- Телефон: ${number}\n- Описание: ${description}\n\nМы свяжемся с вами.\n\nС уважением, команда.`,
@@ -104,7 +92,7 @@ app.get("/api/suggest", async (req, res) => {
   try {
     const response = await axios.get("https://suggest-maps.yandex.ru/v1/suggest", {
       params: {
-        apikey: process.env.YANDEX_API_KEY,
+        apikey: config.apis.yandexApiKey,
         text: query,
         lang: "ru_RU",
         types: type,
@@ -133,7 +121,7 @@ app.get("/api/suggest-fio", async (req, res) => {
       { query },
       {
         headers: {
-          Authorization: `Token ${process.env.DADATA_API_KEY}`,
+          Authorization: `Token ${config.apis.dadataApiKey}`,
         },
       }
     );
@@ -146,12 +134,12 @@ app.get("/api/suggest-fio", async (req, res) => {
   }
 });
 
-// Фронтенд: Любой другой маршрут — возвращаем index.html
+// Фронтенд: Любой другой маршрут — возвращаем index.html из корня
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Запуск сервера
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Сервер запущен на порту ${PORT}`);
+// Старт сервера
+app.listen(config.port, '0.0.0.0', () => {
+  console.log(`🚀 Сервер запущен на порту ${config.port}`);
 });
