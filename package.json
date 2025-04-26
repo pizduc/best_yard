@@ -6,6 +6,7 @@
   "scripts": {
     "setup-db": "node setupDatabase.js",
     "dev": "concurrently \"node setupDatabase.js && vite\" \"node server.js\"",
+    "install": "npm install",  
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
