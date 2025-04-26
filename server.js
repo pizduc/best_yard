@@ -136,7 +136,7 @@ app.get("/api/suggest-fio", async (req, res) => {
   }
 });
 
-const buildPath = path.join(__dirname, '..', 'build');
+const buildPath = path.join(__dirname, '..', 'dist');
 
 app.use(express.static(buildPath));
 
