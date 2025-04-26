@@ -12,7 +12,7 @@ const config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    ssl: isProduction ? { rejectUnauthorized: false } : false,
+    ssl: isProduction ? { rejectUnauthorized: false } : { rejectUnauthorized: false },
   },
   smtp: {
     host: process.env.SMTP_HOST,
