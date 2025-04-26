@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Check } from "lucide-react";
 import axios from "axios";
+import InputMask from "react-input-mask";
 
 const ParticipationSection = () => {
   const [formState, setFormState] = useState({
@@ -18,7 +19,7 @@ const ParticipationSection = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFioLoading, setIsFioLoading] = useState(false);
 
-  const apiUrl = "https://best-yard.onrender.com/api"; // Продакшн URL
+  const apiUrl = "https://best-yard.onrender.com/api";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -33,14 +34,22 @@ const ParticipationSection = () => {
     }
   };
 
-  // Запрос подсказок для адреса
+  const handlePhoneChange = (e) => {
+    let value = e.target.value;
+
+    if (!value.startsWith("+7")) {
+      value = "+7 " + value.replace(/[^0-9]/g, "").slice(0, 10);
+    }
+
+    setFormState((prev) => ({ ...prev, number: value }));
+  };
+
   const fetchSuggestions = async (query: string) => {
     setIsLoading(true);
     try {
       const response = await axios.get(`${apiUrl}/suggest`, {
         params: { query, type: "geo" },
       });
-      console.log("Ответ на запрос подсказок адреса:", response);
       setSuggestions(response.status === 200 ? response.data.suggestions : []);
     } catch (error) {
       console.error("Ошибка при запросе подсказок адреса:", error.response ? error.response.data : error.message);
@@ -50,14 +59,12 @@ const ParticipationSection = () => {
     }
   };
 
-  // Запрос подсказок для ФИО
   const fetchFioSuggestions = async (query: string) => {
     setIsFioLoading(true);
     try {
       const response = await axios.get(`${apiUrl}/suggest-fio`, {
         params: { query },
       });
-      console.log("Ответ на запрос подсказок ФИО:", response);
       setFioSuggestions(response.status === 200 ? response.data.suggestions.map(s => s.value) : []);
     } catch (error) {
       console.error("Ошибка при запросе подсказок ФИО:", error.response ? error.response.data : error.message);
@@ -69,8 +76,16 @@ const ParticipationSection = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const cleanedNumber = formState.number.replace(/\D/g, ""); // Убираем всё кроме цифр
+
     if (!formState.name || !formState.email || !formState.number || !formState.address || !formState.description) {
       alert("Все поля должны быть заполнены!");
+      return;
+    }
+
+    if (cleanedNumber.length !== 11) {
+      alert("Пожалуйста, введите корректный номер телефона.");
       return;
     }
 
@@ -80,12 +95,12 @@ const ParticipationSection = () => {
       const response = await axios.post(`${apiUrl}/applications`, {
         name: formState.name.trim(),
         email: formState.email.trim(),
-        number: formState.number.trim(),
+        number: cleanedNumber, // Отправляем очищенный номер
         address: formState.address.trim(),
         description: formState.description.trim(),
       });
 
-      if (formState.submitted === true) {
+      if (response.status !== 200) {
         throw new Error(`Ошибка сервера: ${response.status}`);
       }
 
@@ -118,7 +133,6 @@ const ParticipationSection = () => {
     <section id="participation" className="py-24 bg-white">
       <div className="section-container">
         <div className="grid lg:grid-cols-2 gap-16">
-          {/* Форма заявки */}
           <div className="animate-fade-up">
             <div className="mb-8">
               <span className="inline-block bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
@@ -158,7 +172,6 @@ const ParticipationSection = () => {
                       className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                       placeholder="Иван Иванов"
                     />
-                    {/* Подсказки для ФИО */}
                     {fioSuggestions.length > 0 && !isFioLoading && (
                       <ul className="mt-2 p-2 border border-gray-200 rounded-md">
                         {fioSuggestions.map((fio, index) => (
@@ -178,18 +191,27 @@ const ParticipationSection = () => {
                     <label htmlFor="number" className="block text-sm font-medium text-foreground mb-1">
                       Телефон *
                     </label>
-                    <input
-                      id="number"
-                      name="number"
-                      type="tel"
-                      required
+                    <InputMask
+                      mask="+7 (999) 999-99-99"
+                      maskChar="_"
                       value={formState.number}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      placeholder="+7 (900) 123-45-67"
-                    />
+                      onChange={handlePhoneChange}
+                    >
+                      {(inputProps) => (
+                        <input
+                          {...inputProps}
+                          id="number"
+                          name="number"
+                          type="tel"
+                          required
+                          className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          placeholder="+7 (900) 123-45-67"
+                        />
+                      )}
+                    </InputMask>
                   </div>
                 </div>
+
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
                     Электронная почта *
@@ -205,6 +227,7 @@ const ParticipationSection = () => {
                     placeholder="example@mail.ru"
                   />
                 </div>
+
                 <div>
                   <label htmlFor="address" className="block text-sm font-medium text-foreground mb-1">
                     Адрес двора *
@@ -219,7 +242,6 @@ const ParticipationSection = () => {
                     className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                     placeholder="г. Кемерово, ул. Примерная, 123"
                   />
-                  {/* Подсказки для адреса */}
                   {suggestions.length > 0 && !isLoading && (
                     <ul className="mt-2 p-2 border border-gray-200 rounded-md">
                       {suggestions.map((suggestion, index) => (
@@ -235,6 +257,7 @@ const ParticipationSection = () => {
                   )}
                   {isLoading && <p className="mt-2 text-gray-500">Загрузка...</p>}
                 </div>
+
                 <div>
                   <label htmlFor="description" className="block text-sm font-medium text-foreground mb-1">
                     Описание предлагаемых изменений *
@@ -250,6 +273,7 @@ const ParticipationSection = () => {
                     placeholder="Опишите ваши идеи по благоустройству двора..."
                   />
                 </div>
+
                 <button
                   type="submit"
                   disabled={formState.submitting}
@@ -260,6 +284,7 @@ const ParticipationSection = () => {
               </form>
             )}
           </div>
+
           {/* Карта */}
           <div className="lg:col-span-1 flex justify-center">
             <div className="rounded-2xl overflow-hidden shadow-lg border border-gray-300 h-[524px] mt-10">
