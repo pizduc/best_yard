@@ -136,10 +136,10 @@ app.get("/api/suggest-fio", async (req, res) => {
   }
 });
 
-// Обслуживание статических файлов (React приложение после сборки)
+// Обслуживание статических файлов из build
 app.use(express.static(path.join(__dirname, 'build')));
 
-// Обслуживание index.html для всех остальных запросов
+// В случае, если не найдено другого маршрута, отдаём index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
