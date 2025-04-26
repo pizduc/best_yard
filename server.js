@@ -1,7 +1,6 @@
 import express from "express";
 import { Pool } from "pg";  // Используем пакет pg для подключения к PostgreSQL
 import cors from "cors";
-import bodyParser from "body-parser";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import axios from "axios";
@@ -11,7 +10,7 @@ dotenv.config();
 console.log("🚀 Сервер перезапущен и готов к работе!");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 
 app.use(cors({ origin: "http://localhost:8080" }));
 app.use(express.json());
@@ -143,7 +142,12 @@ app.get("/api/suggest-fio", async (req, res) => {
   }
 });
 
+app.get("/", (req, res) => {
+  res.send("Главная страница");
+});
+
+
 // Запуск сервера
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
 });
