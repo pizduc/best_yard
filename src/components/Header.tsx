@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X, Award, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from './ThemeToggle'; // Для переключения темы
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -11,7 +12,7 @@ const Header = () => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
-    
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -24,25 +25,15 @@ const Header = () => {
   ];
 
   const handleScrollToFooter = (event, href) => {
-    console.log("handleScrollToFooter triggered");
     event.preventDefault();  // Останавливаем стандартное поведение ссылки
-    
-    // Отложим выполнение на 100 миллисекунд
-    setTimeout(() => {
-      const footerElement = document.getElementById('footer');
-      console.log("footerElement: ", footerElement);
-  
-      if (footerElement) {
-        console.log("Scrolling to footer...");
-        footerElement.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        console.error("Footer element not found");
-      }
-  
-      setMobileMenuOpen(false);
-    }, 100); // Задержка в 100 миллисекунд
+
+    // Используем scrollIntoView с плавной прокруткой
+    const footerElement = document.getElementById('footer');
+    if (footerElement) {
+      footerElement.scrollIntoView({ behavior: 'smooth' });
+      setMobileMenuOpen(false); // Закрыть мобильное меню после перехода
+    }
   };
-  
 
   return (
     <header className={cn(
@@ -82,6 +73,7 @@ const Header = () => {
           >
             Участвовать
           </a>
+          <ThemeToggle /> {/* Кнопка для переключения тем */}
         </nav>
 
         {/* Mobile menu button */}
@@ -117,6 +109,7 @@ const Header = () => {
             Участвовать
             <ChevronDown size={16} className="animate-bounce" />
           </a>
+          <ThemeToggle /> {/* Переключатель темы для мобильного меню */}
         </nav>
       </div>
     </header>
