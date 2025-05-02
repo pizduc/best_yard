@@ -19,7 +19,7 @@ const db = new Pool(config.db);
 
 // Настройки CORS
 app.use(cors({
-  origin: ["https://region42.onrender.com"], // явно указываешь допустимый фронт
+  origin: ["https://region42.onrender.com", "http://localhost:8080"], // явно указываешь допустимый фронт
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type"],
 }));
