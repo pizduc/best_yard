@@ -19,8 +19,11 @@ const db = new Pool(config.db);
 
 // Настройки CORS
 app.use(cors({
-  origin: config.cors.origins,
+  origin: ["https://region42.onrender.com"], // явно указываешь допустимый фронт
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"],
 }));
+
 
 // Настройка для обработки JSON
 app.use(express.json());
