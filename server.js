@@ -712,6 +712,57 @@ app.post("/api/applications2", async (req, res) => {
   }
 });
 
+// Сохранение данных о новом пользователе (POST)
+app.post('/api/user/register', async (req, res) => {
+  console.log('Запрос на /api/user/register:', req.body);
+  const { city, street, house, apartment, contract, accountNumber } = req.body;
+
+  // Проверка обязательных полей
+  if (!city || !street || !house || !contract || !accountNumber) {
+    return res.status(400).json({
+      error: "Пожалуйста, заполните все обязательные поля."
+    });
+  }
+
+  // Генерация уникального user_id (можно использовать UUID)
+  const userId = Date.now(); // Пример, лучше использовать UUID для уникальности
+
+  const query = `
+    INSERT INTO users (
+      login_type, contract_number, city, street, house, apartment, account_number, created_at, user_id, is_special_user
+    ) VALUES (
+      'address', $1, $2, $3, $4, $5, $6, $7, $8, false
+    ) RETURNING user_id
+  `;
+
+  const values = [
+    contract,
+    city,
+    street,
+    house,
+    apartment || null, // Если не указана квартира, ставим null
+    accountNumber,
+    moment().format('YYYY-MM-DD HH:mm:ss'), // Текущая дата для created_at
+    userId,
+  ];
+
+  try {
+    // Вставляем данные пользователя в таблицу
+    const result = await db.query(query, values);
+
+    // Возвращаем ответ с успешно созданным user_id
+    res.status(201).json({
+      message: "Пользователь успешно зарегистрирован",
+      userId: result.rows[0].user_id,
+    });
+  } catch (err) {
+    console.error('Ошибка при регистрации пользователя:', err);
+    res.status(500).json({
+      error: "Ошибка при регистрации, попробуйте позже.",
+    });
+  }
+});
+
 const buildPath = path.resolve(__dirname, './dist');
 
 app.use(express.static(buildPath));
