@@ -632,6 +632,76 @@ app.get("/api/paid-months", async (req, res) => {
   }
 });
 
+app.post("/api/applications2", async (req, res) => {
+  const { type, description, date, time, phone } = req.body;
+
+  console.log("Полученные данные заявки:", req.body);
+
+  if (!description) {
+    return res.status(400).json({ message: "Описание проблемы обязательно" });
+  }
+
+  const sql = `
+    INSERT INTO Applications (type, description, date, time, phone)
+    VALUES ($1, $2, $3, $4, $5) RETURNING id
+  `;
+  const params = [type, description, date, time, phone];
+
+  console.log("Запрос к базе данных:", sql);
+  console.log("Параметры запроса:", params);
+
+  try {
+    // Выполняем запрос к базе данных PostgreSQL
+    const result = await db.query(sql, params);
+    const applicationId = result.rows[0].id;
+
+    console.log("✅ Заявка успешно записана в базу данных, ID заявки:", applicationId);
+    res.json({ message: "Заявка принята!" });
+
+    const notifyEmail = process.env.NOTIFY_EMAIL;
+
+    if (!notifyEmail) {
+      console.error("❌ Не задан email для уведомлений (NOTIFY_EMAIL)");
+      return;
+    }
+
+    const typeLabels = {
+      plumbing: "Сантехника",
+      electrical: "Электрика",
+      construction: "Строительные работы",
+      other: "Другое",
+    };
+
+    const translatedType = typeLabels[type] || type;
+
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: notifyEmail,
+      subject: "Новая заявка на ремонт",
+      text: `Новая заявка на ремонт:\n
+Тип: ${translatedType}
+Описание: ${description}
+Дата: ${date || "не указана"}
+Время: ${time || "не указано"}
+Телефон: ${phone || "не указан"}\n
+Пожалуйста, свяжитесь с клиентом.`,
+    };
+
+    console.log("Параметры отправки email:", mailOptions);
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("❌ Ошибка отправки email:", error);
+        return;
+      }
+      console.log("📩 Email отправлен:", info.response);
+    });
+  } catch (err) {
+    console.error("❌ Ошибка записи в базу данных:", err);
+    return res.status(500).json({ error: "Ошибка сервера. Не удалось сохранить заявку." });
+  }
+});
+
 const buildPath = path.resolve(__dirname, './dist');
 
 app.use(express.static(buildPath));
