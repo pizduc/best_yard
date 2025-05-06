@@ -524,10 +524,11 @@ app.post("/api/payments", async (req, res) => {
     return res.status(400).json({ error: "Некорректные данные" });
   }
 
-  const date = new Date(readingDate);
-  const monthStr = date.toISOString().slice(0, 7); // 'YYYY-MM'
+  // Извлекаем месяц из даты в формате 'YYYY-MM-DD HH:mm:ss.SSS'
+  const monthStr = readingDate.slice(0, 7); // 'YYYY-MM'
 
   try {
+    // Проверка, если оплата за этот месяц уже была произведена
     const checkQuery = `
       SELECT 1 FROM paid_services 
       WHERE user_id = $1 AND to_char(reading_date, 'YYYY-MM') = $2
@@ -538,6 +539,7 @@ app.post("/api/payments", async (req, res) => {
       return res.status(400).json({ error: "Оплата за этот месяц уже произведена" });
     }
 
+    // Вставка данных об оплате
     const insertQuery = `
       INSERT INTO paid_services (user_id, reading_date, services, sum, payment_method)
       VALUES ($1, $2, $3, $4, $5)
