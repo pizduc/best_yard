@@ -440,55 +440,6 @@ app.post("/api/meter-readings", async (req, res) => {
   }
 });
 
-// ✅ Добавление или обновление показаний
-app.post("/api/meter-readings", async (req, res) => {
-  const { userId, hotWater, coldWater, electricity, readingDate } = req.body;
-
-  if (!userId || !readingDate) {
-    return res.status(400).json({ error: "Не указан userId или дата показаний" });
-  }
-
-  const formattedDate = readingDate.substring(0, 7); // YYYY-MM
-
-  try {
-    const { rows } = await db.query(`
-      SELECT id, reading_date
-      FROM meter_readings
-      WHERE user_id = $1
-      ORDER BY reading_date DESC
-    `, [userId]);
-
-    // Удаляем самые старые, если больше двух
-    if (rows.length >= 2) {
-      const oldestId = rows[rows.length - 1].id;
-      await db.query(`DELETE FROM meter_readings WHERE id = $1`, [oldestId]);
-      console.log("🗑 Старые показания удалены");
-    }
-
-    const existing = rows.find(r => r.reading_date.toISOString().substring(0, 7) === formattedDate);
-
-    if (existing) {
-      await db.query(`
-        UPDATE meter_readings
-        SET hot_water = $1, cold_water = $2, electricity = $3, reading_date = $4
-        WHERE id = $5
-      `, [hotWater, coldWater, electricity, readingDate, existing.id]);
-
-      return res.json({ success: true, message: "Показания обновлены" });
-    } else {
-      await db.query(`
-        INSERT INTO meter_readings (user_id, hot_water, cold_water, electricity, reading_date)
-        VALUES ($1, $2, $3, $4, $5)
-      `, [userId, hotWater, coldWater, electricity, readingDate]);
-
-      return res.json({ success: true, message: "Показания добавлены" });
-    }
-  } catch (err) {
-    console.error("❌ Ошибка при сохранении показаний:", err);
-    res.status(500).json({ error: "Ошибка сервера" });
-  }
-});
-
 app.get("/api/calculate-payment", async (req, res) => {
   const { userId, selectedServices } = req.query;
 
