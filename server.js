@@ -294,21 +294,30 @@ app.delete("/api/news/:id", (req, res) => {
   });
 });
 
-// Получение данных профиля
-app.get('/api/user/profile/:userId', async (req, res) => {
-  const userId = req.params.userId;
+// Получение данных профиля пользователя по userId
+app.get("/api/user/profile/:userId", async (req, res) => {
+  const { userId } = req.params;
 
-  const query = 'SELECT * FROM user_profiles WHERE user_id = $1';
+  if (!userId) {
+    return res.status(400).json({ error: "userId обязателен" });
+  }
 
   try {
-    const { rows } = await db.query(query, [userId]);
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Профиль не найден' });
+    const result = await db.query(
+      `SELECT last_name, first_name, middle_name, phone, email
+       FROM user_profiles
+       WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Профиль не найден" });
     }
-    res.json(rows[0]);
+
+    res.json(result.rows[0]);
   } catch (err) {
-    console.error('Ошибка при получении профиля:', err);
-    res.status(500).json({ error: 'Ошибка при получении профиля' });
+    console.error("Ошибка при получении профиля:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
   }
 });
 
