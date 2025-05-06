@@ -221,12 +221,12 @@ app.post('/api/getUserAddress', async (req, res) => {
 
 // ✅ Получение всех новостей
 app.get("/api/news", (req, res) => {
-  client.query("SELECT * FROM news ORDER BY created_at DESC", (err, results) => {
+  db.query("SELECT * FROM news ORDER BY created_at DESC", (err, results) => {
     if (err) {
       console.error("❌ Ошибка загрузки новостей:", err);
       return res.status(500).json({ error: "Ошибка сервера" });
     }
-    res.json(results.rows); // PostgreSQL возвращает данные через поле rows
+    res.json(results.rows);
   });
 });
 
@@ -239,7 +239,7 @@ app.post("/api/news", (req, res) => {
   }
 
   const checkUserQuery = "SELECT is_special_user FROM users WHERE user_id = $1";
-  client.query(checkUserQuery, [userId], (err, results) => {
+  db.query(checkUserQuery, [userId], (err, results) => {
     if (err) {
       console.error("❌ Ошибка при проверке пользователя:", err);
       return res.status(500).json({ error: "Ошибка сервера" });
@@ -250,7 +250,7 @@ app.post("/api/news", (req, res) => {
     }
 
     const insertQuery = "INSERT INTO news (title, content) VALUES ($1, $2)";
-    client.query(insertQuery, [title, content], (err) => {
+    db.query(insertQuery, [title, content], (err) => {
       if (err) {
         console.error("❌ Ошибка при добавлении новости:", err);
         return res.status(500).json({ error: "Ошибка сервера" });
@@ -272,7 +272,7 @@ app.delete("/api/news/:id", (req, res) => {
 
   // Проверка, является ли пользователь особым (specialUser)
   const checkUserQuery = "SELECT is_special_user FROM users WHERE user_id = $1";
-  client.query(checkUserQuery, [userId], (err, results) => {
+  db.query(checkUserQuery, [userId], (err, results) => {
     if (err) {
       console.error("❌ Ошибка при проверке пользователя:", err);
       return res.status(500).json({ error: "Ошибка сервера" });
@@ -284,7 +284,7 @@ app.delete("/api/news/:id", (req, res) => {
 
     // Удаление новости из базы данных
     const deleteQuery = "DELETE FROM news WHERE id = $1";
-    client.query(deleteQuery, [id], (err) => {
+    db.query(deleteQuery, [id], (err) => {
       if (err) {
         console.error("❌ Ошибка при удалении новости:", err);
         return res.status(500).json({ error: "Ошибка при удалении новости" });
