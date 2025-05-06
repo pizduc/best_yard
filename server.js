@@ -294,6 +294,54 @@ app.delete("/api/news/:id", (req, res) => {
   });
 });
 
+// Получение данных профиля
+app.get('/api/user/profile/:userId', async (req, res) => {
+  const userId = req.params.userId;
+
+  const query = 'SELECT * FROM user_profiles WHERE user_id = $1';
+
+  try {
+    const { rows } = await pool.query(query, [userId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Профиль не найден' });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Ошибка при получении профиля:', err);
+    res.status(500).json({ error: 'Ошибка при получении профиля' });
+  }
+});
+
+// Сохранение или обновление данных профиля (POST)
+app.post('/api/user/profile', async (req, res) => {
+  console.log('Запрос на /api/user/profile:', req.body);
+  const { userId, lastName, firstName, middleName, phone, email } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'userId обязателен' });
+  }
+
+  const deleteQuery = 'DELETE FROM user_profiles WHERE user_id = $1';
+
+  try {
+    // Удаляем старые данные
+    await pool.query(deleteQuery, [userId]);
+
+    const insertQuery = `
+      INSERT INTO user_profiles (user_id, last_name, first_name, middle_name, phone, email)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `;
+
+    // Добавляем новые данные
+    await pool.query(insertQuery, [userId, lastName, firstName, middleName, phone, email]);
+
+    res.json({ message: 'Данные профиля сохранены' });
+  } catch (err) {
+    console.error('Ошибка при сохранении профиля:', err);
+    res.status(500).json({ error: 'Ошибка при сохранении профиля' });
+  }
+});
+
 const buildPath = path.resolve(__dirname, './dist');
 
 app.use(express.static(buildPath));
