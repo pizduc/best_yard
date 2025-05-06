@@ -440,6 +440,231 @@ app.post("/api/meter-readings", async (req, res) => {
   }
 });
 
+// ✅ Добавление или обновление показаний
+app.post("/api/meter-readings", async (req, res) => {
+  const { userId, hotWater, coldWater, electricity, readingDate } = req.body;
+
+  if (!userId || !readingDate) {
+    return res.status(400).json({ error: "Не указан userId или дата показаний" });
+  }
+
+  const formattedDate = readingDate.substring(0, 7); // YYYY-MM
+
+  try {
+    const { rows } = await db.query(`
+      SELECT id, reading_date
+      FROM meter_readings
+      WHERE user_id = $1
+      ORDER BY reading_date DESC
+    `, [userId]);
+
+    // Удаляем самые старые, если больше двух
+    if (rows.length >= 2) {
+      const oldestId = rows[rows.length - 1].id;
+      await db.query(`DELETE FROM meter_readings WHERE id = $1`, [oldestId]);
+      console.log("🗑 Старые показания удалены");
+    }
+
+    const existing = rows.find(r => r.reading_date.toISOString().substring(0, 7) === formattedDate);
+
+    if (existing) {
+      await db.query(`
+        UPDATE meter_readings
+        SET hot_water = $1, cold_water = $2, electricity = $3, reading_date = $4
+        WHERE id = $5
+      `, [hotWater, coldWater, electricity, readingDate, existing.id]);
+
+      return res.json({ success: true, message: "Показания обновлены" });
+    } else {
+      await db.query(`
+        INSERT INTO meter_readings (user_id, hot_water, cold_water, electricity, reading_date)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [userId, hotWater, coldWater, electricity, readingDate]);
+
+      return res.json({ success: true, message: "Показания добавлены" });
+    }
+  } catch (err) {
+    console.error("❌ Ошибка при сохранении показаний:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
+});
+
+app.get("/api/calculate-payment", async (req, res) => {
+  const { userId, selectedServices } = req.query;
+
+  if (!userId || !selectedServices) {
+    return res.status(400).json({ error: "Не указан userId или выбранные услуги" });
+  }
+
+  const selectedServicesArray = selectedServices.split(",").map(s => s.trim()).filter(Boolean);
+  let totalAmount = 0;
+
+  const tariffs = {
+    heating: 500,
+    maintenance: 300,
+    hot_water: 17.51,
+    cold_water: 80.69,
+    electricity: 4.70
+  };
+
+  if (selectedServicesArray.includes("heating")) totalAmount += tariffs.heating;
+  if (selectedServicesArray.includes("maintenance")) totalAmount += tariffs.maintenance;
+
+  try {
+    const paidRes = await db.query(
+      `SELECT reading_date FROM paid_services WHERE user_id = $1`,
+      [userId]
+    );
+    const paidMonths = paidRes.rows.map(row => row.reading_date.toISOString().slice(0, 7));
+
+    const readingsRes = await db.query(
+      `SELECT hot_water, cold_water, electricity, reading_date
+       FROM meter_readings
+       WHERE user_id = $1
+       ORDER BY reading_date DESC
+       LIMIT 2`,
+      [userId]
+    );
+
+    const results = readingsRes.rows;
+
+    if (results.length === 0) {
+      return res.json({
+        totalAmount: totalAmount.toFixed(2),
+        paidMonths,
+        warning: "Нет данных о предыдущих показаниях"
+      });
+    }
+
+    const current = results[0];
+    const previous = results[1] || { hot_water: 0, cold_water: 0, electricity: 0 };
+
+    const consumption = {
+      hot_water: Math.max(parseFloat(current.hot_water) - parseFloat(previous.hot_water), 0),
+      cold_water: Math.max(parseFloat(current.cold_water) - parseFloat(previous.cold_water), 0),
+      electricity: Math.max(parseFloat(current.electricity) - parseFloat(previous.electricity), 0)
+    };
+
+    if (selectedServicesArray.includes("hot_water")) totalAmount += consumption.hot_water * tariffs.hot_water;
+    if (selectedServicesArray.includes("cold_water")) totalAmount += consumption.cold_water * tariffs.cold_water;
+    if (selectedServicesArray.includes("electricity")) totalAmount += consumption.electricity * tariffs.electricity;
+
+    res.json({
+      totalAmount: totalAmount.toFixed(2),
+      paidMonths,
+      details: {
+        heating: selectedServicesArray.includes("heating") ? tariffs.heating : 0,
+        maintenance: selectedServicesArray.includes("maintenance") ? tariffs.maintenance : 0,
+        hot_water: selectedServicesArray.includes("hot_water") ? consumption.hot_water * tariffs.hot_water : 0,
+        cold_water: selectedServicesArray.includes("cold_water") ? consumption.cold_water * tariffs.cold_water : 0,
+        electricity: selectedServicesArray.includes("electricity") ? consumption.electricity * tariffs.electricity : 0
+      }
+    });
+  } catch (err) {
+    console.error("❌ Ошибка при расчете платежа:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
+});
+
+app.post("/api/payments", async (req, res) => {
+  const { userId, readingDate, services, totalAmount, paymentMethod } = req.body;
+
+  if (!userId || !readingDate || !services || services.length === 0 || !totalAmount || !paymentMethod) {
+    return res.status(400).json({ error: "Некорректные данные" });
+  }
+
+  const date = new Date(readingDate);
+  const monthStr = date.toISOString().slice(0, 7); // 'YYYY-MM'
+
+  try {
+    const checkQuery = `
+      SELECT 1 FROM paid_services 
+      WHERE user_id = $1 AND to_char(reading_date, 'YYYY-MM') = $2
+    `;
+    const checkRes = await db.query(checkQuery, [userId, monthStr]);
+
+    if (checkRes.rows.length > 0) {
+      return res.status(400).json({ error: "Оплата за этот месяц уже произведена" });
+    }
+
+    const insertQuery = `
+      INSERT INTO paid_services (user_id, reading_date, services, sum, payment_method)
+      VALUES ($1, $2, $3, $4, $5)
+    `;
+    await db.query(insertQuery, [userId, readingDate, JSON.stringify(services), totalAmount, paymentMethod]);
+
+    res.json({ success: true, message: "Оплата успешно сохранена" });
+  } catch (err) {
+    console.error("❌ Ошибка при записи оплаты:", err);
+    res.status(500).json({ error: "Ошибка сервера при сохранении оплаты" });
+  }
+});
+
+app.post("/api/save-payment", async (req, res) => {
+  const { userId, selectedMonth, selectedServices, totalAmount, paymentMethod } = req.body;
+
+  if (!userId || !selectedMonth || !selectedServices || totalAmount === undefined || !paymentMethod) {
+    return res.status(400).json({ error: "Некорректные данные" });
+  }
+
+  const readingDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const currentDate = readingDate;
+
+  const coldWaterAmount = selectedServices.includes("cold_water") ? totalAmount * 0.2 : 0;
+  const hotWaterAmount = selectedServices.includes("hot_water") ? totalAmount * 0.3 : 0;
+  const electricityAmount = selectedServices.includes("electricity") ? totalAmount * 0.5 : 0;
+
+  try {
+    const insertQuery = `
+      INSERT INTO paid_services 
+      (user_id, cold_water, hot_water, electricity, reading_date, sum, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `;
+    await db.query(insertQuery, [
+      userId,
+      coldWaterAmount,
+      hotWaterAmount,
+      electricityAmount,
+      readingDate,
+      totalAmount,
+      currentDate
+    ]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("❌ Ошибка при сохранении данных в БД:", err);
+    res.status(500).json({ error: "Ошибка сервера при сохранении данных оплаты" });
+  }
+});
+
+app.get("/api/paid-months", async (req, res) => {
+  const { userId } = req.query;
+
+  if (!userId) {
+    return res.status(400).json({ error: "Отсутствует идентификатор пользователя" });
+  }
+
+  try {
+    const query = `
+      SELECT DISTINCT to_char(reading_date, 'YYYY-MM') AS paid_month
+      FROM paid_services
+      WHERE user_id = $1
+      ORDER BY paid_month DESC
+    `;
+    const { rows } = await db.query(query, [userId]);
+    const paidMonths = rows.map(row => row.paid_month);
+
+    if (paidMonths.length === 0) {
+      return res.status(404).json({ error: "Не найдены оплаченные месяцы" });
+    }
+
+    res.json({ paidMonths });
+  } catch (err) {
+    console.error("❌ Ошибка при извлечении месяцев:", err);
+    res.status(500).json({ error: "Ошибка сервера при извлечении данных" });
+  }
+});
+
 const buildPath = path.resolve(__dirname, './dist');
 
 app.use(express.static(buildPath));
