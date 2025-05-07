@@ -7,13 +7,13 @@ import axios from "axios";
 import path from "path";
 import { fileURLToPath } from "url";
 import config from "./config.js"; // Подключаем конфиг
+import { v4 as uuidv4 } from 'uuid'; // Импортируем функцию для генерации UUID
 
 dotenv.config();
 
 // Получаем путь к текущему файлу и директории
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const { v4: uuidv4 } = require('uuid'); // Импортируем функцию для генерации UUID
 
 const app = express();
 const db = new Pool(config.db);
