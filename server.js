@@ -797,9 +797,6 @@ app.post("/api/email/send-code", async (req, res) => {
     return res.status(400).json({ error: "userId и email обязательны" });
   }
 
-  // Конвертируем userId в UUID
-  const userIdAsUuid = uuidv4(userId); // Используем uuidv4, чтобы конвертировать в UUID
-
   const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-значный код
 
   const client = await db.connect();
@@ -812,7 +809,7 @@ app.post("/api/email/send-code", async (req, res) => {
       VALUES ($1, $2, $3)
       ON CONFLICT (user_id) DO UPDATE
       SET code = EXCLUDED.code, created_at = CURRENT_TIMESTAMP
-    `, [userIdAsUuid, email, code]);
+    `, [userId, email, code]);
 
     // Отправка письма
     await transporter.sendMail({
@@ -840,13 +837,11 @@ app.post("/api/email/verify", async (req, res) => {
     return res.status(400).json({ error: "userId и code обязательны" });
   }
 
-  // Преобразуем userId в UUID, если необходимо
-  const userIdAsUuid = uuidv4(); // Здесь можно использовать свой алгоритм преобразования userId в UUID
-
   try {
+    // Выполняем запрос с использованием userId как строки
     const result = await db.query(`
-      SELECT code, created_at FROM email_verification WHERE user_id = $1::uuid
-    `, [userIdAsUuid]);
+      SELECT code, created_at FROM email_verification WHERE user_id = $1
+    `, [userId]);
 
     if (result.rows.length === 0) {
       return res.status(400).json({ error: "Код не найден" });
@@ -864,10 +859,10 @@ app.post("/api/email/verify", async (req, res) => {
     }
 
     await db.query(`
-      UPDATE user_profiles SET email_verified = TRUE WHERE user_id = $1::uuid
-    `, [userIdAsUuid]);
+      UPDATE user_profiles SET email_verified = TRUE WHERE user_id = $1
+    `, [userId]);
 
-    await db.query(`DELETE FROM email_verification WHERE user_id = $1::uuid`, [userIdAsUuid]);
+    await db.query(`DELETE FROM email_verification WHERE user_id = $1`, [userId]);
 
     res.json({ message: "Email успешно подтвержден" });
   } catch (err) {
@@ -875,6 +870,7 @@ app.post("/api/email/verify", async (req, res) => {
     res.status(500).json({ error: "Ошибка сервера" });
   }
 });
+
 
 const buildPath = path.resolve(__dirname, './dist');
 
