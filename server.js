@@ -294,6 +294,33 @@ app.delete("/api/news/:id", (req, res) => {
   });
 });
 
+// Получение данных профиля по userId
+app.get("/api/user/profile/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(400).json({ error: "userId обязателен" });
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT last_name, first_name, middle_name, phone, email
+       FROM user_profiles
+       WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Профиль не найден" });
+    }
+
+    res.json(result.rows[0]); // Возвращаем один объект, а не массив
+  } catch (err) {
+    console.error("Ошибка при получении профиля:", err);
+    res.status(500).json({ error: "Ошибка при получении профиля" });
+  }
+});
+
 // Получение данных пользователя по userId
 app.get("/api/user/addresses/:userId", async (req, res) => {
   const { userId } = req.params;
