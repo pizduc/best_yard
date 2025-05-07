@@ -840,17 +840,13 @@ app.post("/api/email/verify", async (req, res) => {
     return res.status(400).json({ error: "userId и code обязательны" });
   }
 
+  // Преобразуем userId в UUID, если необходимо
+  const userIdAsUuid = uuidv4(); // Здесь можно использовать свой алгоритм преобразования userId в UUID
+
   try {
-    // Логируем полученные данные
-    console.log(`Проверка кода для userId: ${userId}, code: ${code}`);
-
-    // Запрос без преобразования userId в UUID
     const result = await db.query(`
-      SELECT code, created_at FROM email_verification WHERE user_id = $1
-    `, [userId]);  // Переходим без приведения к UUID
-
-    // Логируем результат запроса
-    console.log("Результат запроса:", result.rows);
+      SELECT code, created_at FROM email_verification WHERE user_id = $1::uuid
+    `, [userIdAsUuid]);
 
     if (result.rows.length === 0) {
       return res.status(400).json({ error: "Код не найден" });
@@ -868,12 +864,10 @@ app.post("/api/email/verify", async (req, res) => {
     }
 
     await db.query(`
-      UPDATE user_profiles SET email_verified = TRUE WHERE user_id = $1
-    `, [userId]);  // Переходим без приведения к UUID
+      UPDATE user_profiles SET email_verified = TRUE WHERE user_id = $1::uuid
+    `, [userIdAsUuid]);
 
-    await db.query(`
-      DELETE FROM email_verification WHERE user_id = $1
-    `, [userId]);  // Переходим без приведения к UUID
+    await db.query(`DELETE FROM email_verification WHERE user_id = $1::uuid`, [userIdAsUuid]);
 
     res.json({ message: "Email успешно подтвержден" });
   } catch (err) {
