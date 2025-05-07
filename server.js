@@ -841,15 +841,15 @@ app.post("/api/email/verify", async (req, res) => {
   }
 
   try {
-    // Добавляем логирование перед запросом
+    // Логируем полученные данные
     console.log(`Проверка кода для userId: ${userId}, code: ${code}`);
-    
-    // Запрос с явной конвертацией userId в UUID
-    const result = await db.query(`
-      SELECT code, created_at FROM email_verification WHERE user_id = $1::uuid
-    `, [userId]);
 
-    // Логирование результата запроса
+    // Запрос без преобразования userId в UUID
+    const result = await db.query(`
+      SELECT code, created_at FROM email_verification WHERE user_id = $1
+    `, [userId]);  // Переходим без приведения к UUID
+
+    // Логируем результат запроса
     console.log("Результат запроса:", result.rows);
 
     if (result.rows.length === 0) {
@@ -868,12 +868,12 @@ app.post("/api/email/verify", async (req, res) => {
     }
 
     await db.query(`
-      UPDATE user_profiles SET email_verified = TRUE WHERE user_id = $1::uuid
-    `, [userId]);
+      UPDATE user_profiles SET email_verified = TRUE WHERE user_id = $1
+    `, [userId]);  // Переходим без приведения к UUID
 
     await db.query(`
-      DELETE FROM email_verification WHERE user_id = $1::uuid
-    `, [userId]);
+      DELETE FROM email_verification WHERE user_id = $1
+    `, [userId]);  // Переходим без приведения к UUID
 
     res.json({ message: "Email успешно подтвержден" });
   } catch (err) {
