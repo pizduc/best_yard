@@ -13,6 +13,7 @@ dotenv.config();
 // Получаем путь к текущему файлу и директории
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const { v4: uuidv4 } = require('uuid'); // Импортируем функцию для генерации UUID
 
 const app = express();
 const db = new Pool(config.db);
@@ -796,16 +797,24 @@ app.post("/api/email/send-code", async (req, res) => {
     return res.status(400).json({ error: "userId и email обязательны" });
   }
 
+  // Конвертируем userId в UUID
+  const userIdAsUuid = uuidv4(userId); // Используем uuidv4, чтобы конвертировать в UUID
+
   const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-значный код
 
+  const client = await db.connect();
   try {
-    await db.query(`
+    await client.query('BEGIN'); // Начинаем транзакцию
+
+    // Вставка или обновление записи в таблице email_verification
+    await client.query(`
       INSERT INTO email_verification (user_id, email, code)
       VALUES ($1, $2, $3)
       ON CONFLICT (user_id) DO UPDATE
       SET code = EXCLUDED.code, created_at = CURRENT_TIMESTAMP
-    `, [userId, email, code]);
+    `, [userIdAsUuid, email, code]);
 
+    // Отправка письма
     await transporter.sendMail({
       from: `"Best Yard" <${config.smtp.user}>`,
       to: email,
@@ -813,10 +822,14 @@ app.post("/api/email/send-code", async (req, res) => {
       text: `Ваш код подтверждения: ${code}`,
     });
 
+    await client.query('COMMIT'); // Подтверждаем транзакцию
     res.json({ message: "Код отправлен на email" });
   } catch (err) {
+    await client.query('ROLLBACK'); // Откатываем транзакцию в случае ошибки
     console.error("Ошибка при отправке email:", err);
     res.status(500).json({ error: "Ошибка сервера" });
+  } finally {
+    client.release(); // Освобождаем подключение
   }
 });
 
@@ -827,10 +840,13 @@ app.post("/api/email/verify", async (req, res) => {
     return res.status(400).json({ error: "userId и code обязательны" });
   }
 
+  // Конвертируем userId в UUID
+  const userIdAsUuid = uuidv4(userId);
+
   try {
     const result = await db.query(`
       SELECT code, created_at FROM email_verification WHERE user_id = $1
-    `, [userId]);
+    `, [userIdAsUuid]);
 
     if (result.rows.length === 0) {
       return res.status(400).json({ error: "Код не найден" });
@@ -849,9 +865,9 @@ app.post("/api/email/verify", async (req, res) => {
 
     await db.query(`
       UPDATE user_profiles SET email_verified = TRUE WHERE user_id = $1
-    `, [userId]);
+    `, [userIdAsUuid]);
 
-    await db.query(`DELETE FROM email_verification WHERE user_id = $1`, [userId]);
+    await db.query(`DELETE FROM email_verification WHERE user_id = $1`, [userIdAsUuid]);
 
     res.json({ message: "Email успешно подтвержден" });
   } catch (err) {
