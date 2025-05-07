@@ -294,8 +294,8 @@ app.delete("/api/news/:id", (req, res) => {
   });
 });
 
-// Получение данных профиля пользователя по userId
-app.get("/api/user/profile/:userId", async (req, res) => {
+// Получение данных пользователя по userId
+app.get("/api/user/addresses/:userId", async (req, res) => {
   const { userId } = req.params;
 
   if (!userId) {
@@ -304,19 +304,19 @@ app.get("/api/user/profile/:userId", async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT last_name, first_name, middle_name, phone, email
-       FROM user_profiles
+      `SELECT city, street, house, apartment, contract_number, account_number
+       FROM users
        WHERE user_id = $1`,
       [userId]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Профиль не найден" });
+      return res.status(404).json({ error: "Адреса не найдены" });
     }
 
-    res.json(result.rows[0]);
+    res.json(result.rows);
   } catch (err) {
-    console.error("Ошибка при получении профиля:", err);
+    console.error("Ошибка при получении адресов:", err);
     res.status(500).json({ error: "Ошибка сервера" });
   }
 });
