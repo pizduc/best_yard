@@ -790,6 +790,76 @@ app.post('/api/user/register', async (req, res) => {
   }
 });
 
+app.post("/api/email/send-code", async (req, res) => {
+  const { userId, email } = req.body;
+  if (!userId || !email) {
+    return res.status(400).json({ error: "userId и email обязательны" });
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-значный код
+
+  try {
+    await db.query(`
+      INSERT INTO email_verification (user_id, email, code)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (user_id) DO UPDATE
+      SET code = EXCLUDED.code, created_at = CURRENT_TIMESTAMP
+    `, [userId, email, code]);
+
+    await transporter.sendMail({
+      from: `"Best Yard" <${config.smtp.user}>`,
+      to: email,
+      subject: "Код подтверждения",
+      text: `Ваш код подтверждения: ${code}`,
+    });
+
+    res.json({ message: "Код отправлен на email" });
+  } catch (err) {
+    console.error("Ошибка при отправке email:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
+});
+
+app.post("/api/email/verify", async (req, res) => {
+  const { userId, code } = req.body;
+
+  if (!userId || !code) {
+    return res.status(400).json({ error: "userId и code обязательны" });
+  }
+
+  try {
+    const result = await db.query(`
+      SELECT code, created_at FROM email_verification WHERE user_id = $1
+    `, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: "Код не найден" });
+    }
+
+    const { code: storedCode, created_at } = result.rows[0];
+    const expired = new Date(created_at) < new Date(Date.now() - 10 * 60 * 1000); // 10 минут
+
+    if (expired) {
+      return res.status(400).json({ error: "Код истёк" });
+    }
+
+    if (storedCode !== code) {
+      return res.status(400).json({ error: "Неверный код" });
+    }
+
+    await db.query(`
+      UPDATE user_profiles SET email_verified = TRUE WHERE user_id = $1
+    `, [userId]);
+
+    await db.query(`DELETE FROM email_verification WHERE user_id = $1`, [userId]);
+
+    res.json({ message: "Email успешно подтвержден" });
+  } catch (err) {
+    console.error("Ошибка при подтверждении email:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
+});
+
 const buildPath = path.resolve(__dirname, './dist');
 
 app.use(express.static(buildPath));
