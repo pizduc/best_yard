@@ -295,6 +295,35 @@ app.delete("/api/news/:id", (req, res) => {
   });
 });
 
+app.post('/api/user/profile', async (req, res) => {
+  console.log('Запрос на /api/user/profile:', req.body);
+  const { userId, lastName, firstName, middleName, phone, email, isEmailVerified } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'userId обязателен' });
+  }
+
+  const deleteQuery = 'DELETE FROM user_profiles WHERE user_id = $1';
+
+  try {
+    // Удаляем старые данные
+    await db.query(deleteQuery, [userId]);
+
+    const insertQuery = `
+      INSERT INTO user_profiles (user_id, last_name, first_name, middle_name, phone, email, email_verified)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `;
+
+    // Добавляем новые данные
+    await db.query(insertQuery, [userId, lastName, firstName, middleName, phone, email, isEmailVerified || false]);
+
+    res.json({ message: 'Данные профиля сохранены' });
+  } catch (err) {
+    console.error('Ошибка при сохранении профиля:', err);
+    res.status(500).json({ error: 'Ошибка при сохранении профиля' });
+  }
+});
+
 // Получение данных профиля по userId
 app.get("/api/user/profile/:userId", async (req, res) => {
   const { userId } = req.params;
@@ -305,7 +334,13 @@ app.get("/api/user/profile/:userId", async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT last_name, first_name, middle_name, phone, email
+      `SELECT last_name, first_name, middle_name, phone, email, email_verified, 
+              CASE WHEN (last_name IS NOT NULL AND first_name IS NOT NULL AND 
+                        middle_name IS NOT NULL AND phone IS NOT NULL AND 
+                        email IS NOT NULL AND email_verified = TRUE) 
+                   THEN TRUE 
+                   ELSE FALSE 
+              END as is_profile_complete
        FROM user_profiles
        WHERE user_id = $1`,
       [userId]
@@ -315,7 +350,7 @@ app.get("/api/user/profile/:userId", async (req, res) => {
       return res.status(404).json({ error: "Профиль не найден" });
     }
 
-    res.json(result.rows[0]); // Возвращаем один объект, а не массив
+    res.json(result.rows[0]);
   } catch (err) {
     console.error("Ошибка при получении профиля:", err);
     res.status(500).json({ error: "Ошибка при получении профиля" });
@@ -346,36 +381,6 @@ app.get("/api/user/addresses/:userId", async (req, res) => {
   } catch (err) {
     console.error("Ошибка при получении адресов:", err);
     res.status(500).json({ error: "Ошибка сервера" });
-  }
-});
-
-// Сохранение или обновление данных профиля (POST)
-app.post('/api/user/profile', async (req, res) => {
-  console.log('Запрос на /api/user/profile:', req.body);
-  const { userId, lastName, firstName, middleName, phone, email } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({ error: 'userId обязателен' });
-  }
-
-  const deleteQuery = 'DELETE FROM user_profiles WHERE user_id = $1';
-
-  try {
-    // Удаляем старые данные
-    await db.query(deleteQuery, [userId]);
-
-    const insertQuery = `
-      INSERT INTO user_profiles (user_id, last_name, first_name, middle_name, phone, email)
-      VALUES ($1, $2, $3, $4, $5, $6)
-    `;
-
-    // Добавляем новые данные
-    await db.query(insertQuery, [userId, lastName, firstName, middleName, phone, email]);
-
-    res.json({ message: 'Данные профиля сохранены' });
-  } catch (err) {
-    console.error('Ошибка при сохранении профиля:', err);
-    res.status(500).json({ error: 'Ошибка при сохранении профиля' });
   }
 });
 
