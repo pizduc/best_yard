@@ -745,9 +745,6 @@ app.post("/api/applications2", async (req, res) => {
   }
 });
 
-
-});
-
 app.post("/api/email/send-code", async (req, res) => {
   const { userId, email } = req.body;
   if (!userId || !email) {
