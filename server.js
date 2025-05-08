@@ -895,6 +895,76 @@ app.post("/api/email/verify", async (req, res) => {
   }
 });
 
+// Сохранение данных о новом пользователе (POST)
+app.post('/api/user/register', async (req, res) => {
+  console.log('Запрос на /api/user/register:', req.body);
+  const { city, street, house, apartment, contract, accountNumber } = req.body;
+
+  // Проверка обязательных полей
+  if (!city || !street || !house || !contract || !accountNumber) {
+    return res.status(400).json({
+      error: "Пожалуйста, заполните все обязательные поля."
+    });
+  }
+
+  const userId = Date.now(); // Пример генерации user_id (лучше UUID)
+  const createdAt = moment().format('YYYY-MM-DD HH:mm:ss');
+
+  const client = await db.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const insertUserQuery = `
+      INSERT INTO users (
+        login_type, contract_number, city, street, house, apartment, account_number, created_at, user_id, is_special_user
+      ) VALUES (
+        'address', $1, $2, $3, $4, $5, $6, $7, $8, false
+      )
+    `;
+
+    const userValues = [
+      contract,
+      city,
+      street,
+      house,
+      apartment || null,
+      accountNumber,
+      createdAt,
+      userId,
+    ];
+
+    await client.query(insertUserQuery, userValues);
+
+    const insertProfileQuery = `
+      INSERT INTO user_profiles (
+        user_id, created_at
+      ) VALUES (
+        $1, $2
+      )
+    `;
+
+    const profileValues = [userId, createdAt];
+
+    await client.query(insertProfileQuery, profileValues);
+
+    await client.query('COMMIT');
+
+    res.status(201).json({
+      message: "Пользователь успешно зарегистрирован",
+      userId,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Ошибка при регистрации пользователя:', err);
+    res.status(500).json({
+      error: "Ошибка при регистрации, попробуйте позже.",
+    });
+  } finally {
+    client.release();
+  }
+});
+
 const buildPath = path.resolve(__dirname, './dist');
 
 app.use(express.static(buildPath));
