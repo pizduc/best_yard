@@ -838,7 +838,6 @@ app.post("/api/email/verify", async (req, res) => {
   }
 
   try {
-    // Выполняем запрос с использованием userId как строки
     const result = await db.query(`
       SELECT code, created_at FROM email_verification WHERE user_id = $1
     `, [userId]);
@@ -848,19 +847,25 @@ app.post("/api/email/verify", async (req, res) => {
     }
 
     const { code: storedCode, created_at } = result.rows[0];
-    const expired = new Date(created_at) < new Date(Date.now() - 10 * 60 * 1000); // 10 минут
+    const expired = new Date(created_at) < new Date(Date.now() - 10 * 60 * 1000);
 
     if (expired) {
       return res.status(400).json({ error: "Код истёк" });
     }
 
-    if (storedCode !== code) {
+    if (storedCode.trim().toLowerCase() !== code.trim().toLowerCase()) {
+      console.log(`Код не совпадает. В базе: '${storedCode}', пришёл: '${code}'`);
       return res.status(400).json({ error: "Неверный код" });
     }
 
-    await db.query(`
-      UPDATE user_profiles SET email_verified = TRUE WHERE user_id = $1
+    const updateResult = await db.query(`
+      UPDATE user_profiles SET email_verified = TRUE WHERE user_id = $1 RETURNING email_verified
     `, [userId]);
+
+    if (updateResult.rowCount === 0) {
+      console.log("❌ UPDATE не сработал — user_id не найден в user_profiles");
+      return res.status(400).json({ error: "Пользователь не найден" });
+    }
 
     await db.query(`DELETE FROM email_verification WHERE user_id = $1`, [userId]);
 
@@ -870,7 +875,6 @@ app.post("/api/email/verify", async (req, res) => {
     res.status(500).json({ error: "Ошибка сервера" });
   }
 });
-
 
 const buildPath = path.resolve(__dirname, './dist');
 
