@@ -7,7 +7,7 @@ import axios from "axios";
 import path from "path";
 import { fileURLToPath } from "url";
 import config from "./config.js"; // Подключаем конфиг
-import { v4 as uuidv4 } from 'uuid'; // Импортируем функцию для генерации UUID
+import moment from 'moment';
 
 dotenv.config();
 
