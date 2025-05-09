@@ -767,7 +767,7 @@ app.post("/api/email/send-code", async (req, res) => {
 
     // Отправка письма
     await transporter.sendMail({
-      from: `"Best Yard" <${config.smtp.user}>`,
+      from: `"Регион 42" <${config.smtp.user}>`,
       to: email,
       subject: "Код подтверждения",
       text: `Ваш код подтверждения: ${code}`,
