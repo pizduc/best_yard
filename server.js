@@ -508,7 +508,33 @@ app.get("/api/calculate-payment", async (req, res) => {
     electricity: 0
   };
 
-  // Обработка тарифов
+  // Преобразуем месяц в формат YYYY-MM
+  const monthsMap = {
+    января: 1,
+    февраля: 2,
+    марта: 3,
+    апреля: 4,
+    мая: 5,
+    июня: 6,
+    июля: 7,
+    августа: 8,
+    сентября: 9,
+    октября: 10,
+    ноября: 11,
+    декабря: 12
+  };
+
+  const [monthName, year] = selectedMonth.split(" ");
+  const monthNumber = monthsMap[monthName.toLowerCase()];
+  if (!monthNumber || !year) {
+    return res.status(400).json({ error: "Некорректный формат месяца" });
+  }
+  const formattedMonth = `${year}-${monthNumber.toString().padStart(2, "0")}`;
+
+  // Теперь, formattedMonth имеет правильный формат YYYY-MM
+  console.log(formattedMonth); // Для отладки
+
+  // Дальше продолжаем расчёт
   if (selectedServicesArray.includes("heating")) {
     details.heating = tariffs.heating;
     totalAmount += tariffs.heating;
@@ -519,13 +545,7 @@ app.get("/api/calculate-payment", async (req, res) => {
     totalAmount += tariffs.maintenance;
   }
 
-  // Разбираем месяц и год
-  const [year, month] = selectedMonth.split("-");
-  if (!year || !month || month < 1 || month > 12) {
-    return res.status(400).json({ error: "Некорректный формат месяца" });
-  }
-
-  const prevMonthDate = new Date(Number(year), Number(month) - 2); // месяц на 1 меньше, т.к. с 0
+  const prevMonthDate = new Date(Number(year), monthNumber - 2); // Месяц на 1 меньше, т.к. с 0
   const prevMonth = prevMonthDate.toISOString().slice(0, 7);
 
   try {
@@ -540,7 +560,7 @@ app.get("/api/calculate-payment", async (req, res) => {
        FROM meter_readings
        WHERE user_id = $1 AND to_char(reading_date, 'YYYY-MM') IN ($2, $3)
        ORDER BY reading_date`,
-      [userId, selectedMonth, prevMonth]
+      [userId, formattedMonth, prevMonth]
     );
 
     const readings = {};
@@ -548,15 +568,14 @@ app.get("/api/calculate-payment", async (req, res) => {
       readings[row.month] = row;
     });
 
-    const current = readings[selectedMonth];
+    const current = readings[formattedMonth];
     const previous = readings[prevMonth];
 
-    // Проверка на отсутствие показаний за текущий или предыдущий месяц
     if (!current) {
       return res.json({
         totalAmount: totalAmount.toFixed(2),
         paidMonths,
-        warning: `Нет показаний за выбранный месяц: ${selectedMonth}`
+        warning: `Нет показаний за выбранный месяц: ${formattedMonth}`
       });
     }
 
@@ -574,7 +593,6 @@ app.get("/api/calculate-payment", async (req, res) => {
       electricity: Math.max(parseFloat(current.electricity) - parseFloat(previous.electricity), 0)
     };
 
-    // Добавление данных по расходу воды и электроэнергии
     if (selectedServicesArray.includes("hot_water")) {
       details.hot_water = +(consumption.hot_water * tariffs.hot_water).toFixed(2);
       totalAmount += details.hot_water;
