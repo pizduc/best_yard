@@ -508,6 +508,7 @@ app.get("/api/calculate-payment", async (req, res) => {
     electricity: 0
   };
 
+  // Обработка тарифов
   if (selectedServicesArray.includes("heating")) {
     details.heating = tariffs.heating;
     totalAmount += tariffs.heating;
@@ -518,7 +519,12 @@ app.get("/api/calculate-payment", async (req, res) => {
     totalAmount += tariffs.maintenance;
   }
 
+  // Разбираем месяц и год
   const [year, month] = selectedMonth.split("-");
+  if (!year || !month || month < 1 || month > 12) {
+    return res.status(400).json({ error: "Некорректный формат месяца" });
+  }
+
   const prevMonthDate = new Date(Number(year), Number(month) - 2); // месяц на 1 меньше, т.к. с 0
   const prevMonth = prevMonthDate.toISOString().slice(0, 7);
 
@@ -545,6 +551,7 @@ app.get("/api/calculate-payment", async (req, res) => {
     const current = readings[selectedMonth];
     const previous = readings[prevMonth];
 
+    // Проверка на отсутствие показаний за текущий или предыдущий месяц
     if (!current) {
       return res.json({
         totalAmount: totalAmount.toFixed(2),
@@ -567,6 +574,7 @@ app.get("/api/calculate-payment", async (req, res) => {
       electricity: Math.max(parseFloat(current.electricity) - parseFloat(previous.electricity), 0)
     };
 
+    // Добавление данных по расходу воды и электроэнергии
     if (selectedServicesArray.includes("hot_water")) {
       details.hot_water = +(consumption.hot_water * tariffs.hot_water).toFixed(2);
       totalAmount += details.hot_water;
