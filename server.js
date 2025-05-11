@@ -738,6 +738,43 @@ app.get("/api/paid-months", async (req, res) => {
   }
 });
 
+app.get("/api/unpaid-months", async (req, res) => {
+  const { userId } = req.query;
+
+  if (!userId) {
+    return res.status(400).json({ error: "Не указан userId" });
+  }
+
+  try {
+    // Получаем все оплаченные месяцы для пользователя
+    const paidRes = await db.query(
+      `SELECT to_char(reading_date, 'YYYY-MM') AS month 
+       FROM paid_services 
+       WHERE user_id = $1`, 
+      [userId]
+    );
+    const paidMonths = paidRes.rows.map(row => row.month);
+
+    // Получаем все доступные месяцы из показаний
+    const readingsRes = await db.query(
+      `SELECT DISTINCT to_char(reading_date, 'YYYY-MM') AS month 
+       FROM meter_readings 
+       WHERE user_id = $1`, 
+      [userId]
+    );
+    const allMonths = readingsRes.rows.map(row => row.month);
+
+    // Фильтруем все месяцы, которые не оплачены
+    const unpaidMonths = allMonths.filter(month => !paidMonths.includes(month));
+
+    res.json({ unpaidMonths });
+
+  } catch (err) {
+    console.error("❌ Ошибка при получении неоплаченных месяцев:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
+});
+
 // API для подачи заявки
 app.post("/api/applications2", async (req, res) => {
   const { type, description, date, time, phone } = req.body;
