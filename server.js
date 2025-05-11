@@ -663,10 +663,26 @@ app.post("/api/payments", async (req, res) => {
 });
 
 app.post("/api/save-payment", async (req, res) => {
-  const { userId, selectedMonth, details, totalAmount, paymentMethod } = req.body;
+  const { userId, selectedMonth, details, selectedServices, totalAmount, paymentMethod } = req.body;
 
-  if (!userId || !selectedMonth || !details || totalAmount === undefined || !paymentMethod) {
-    return res.status(400).json({ error: "Некорректные данные" });
+  if (!userId || !selectedMonth || totalAmount === undefined || !paymentMethod) {
+    return res.status(400).json({ error: "Некорректные данные (отсутствуют обязательные поля)" });
+  }
+
+  // Подготовка данных: либо из details, либо из selectedServices
+  let coldWater = 0, hotWater = 0, electricity = 0;
+
+  if (details) {
+    coldWater = details.cold_water || 0;
+    hotWater = details.hot_water || 0;
+    electricity = details.electricity || 0;
+  } else if (Array.isArray(selectedServices)) {
+    // Пример: если услуга выбрана — считаем, что её стоимость включена
+    coldWater = selectedServices.includes("cold_water") ? 1 : 0;
+    hotWater = selectedServices.includes("hot_water") ? 1 : 0;
+    electricity = selectedServices.includes("electricity") ? 1 : 0;
+  } else {
+    return res.status(400).json({ error: "Не передан ни объект details, ни список selectedServices" });
   }
 
   const readingDate = `${selectedMonth}-01 00:00:00`;
@@ -680,9 +696,9 @@ app.post("/api/save-payment", async (req, res) => {
     `;
     await db.query(insertQuery, [
       userId,
-      details.cold_water || 0,
-      details.hot_water || 0,
-      details.electricity || 0,
+      coldWater,
+      hotWater,
+      electricity,
       readingDate,
       totalAmount,
       createdAt,
