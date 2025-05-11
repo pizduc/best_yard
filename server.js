@@ -678,7 +678,7 @@ app.get("/api/paid-months", async (req, res) => {
   }
 
   try {
-    // Извлекаем все месяцы с показаниями счетчиков
+    // Извлекаем все месяцы с показаниями счетчиков (без учета оплат)
     const readingsQuery = `
       SELECT DISTINCT to_char(reading_date, 'YYYY-MM') AS reading_month
       FROM meter_readings
