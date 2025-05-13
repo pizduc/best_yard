@@ -57,32 +57,46 @@ app.post("/api/applications", (req, res) => {
     return res.status(400).json({ error: "Все поля должны быть заполнены!" });
   }
 
-  const sql = `
-    INSERT INTO applications (name, email, number, address, description)
-    VALUES ($1, $2, $3, $4, $5)
-  `;
-
-  db.query(sql, [name, email, number, address, description], (err) => {
-    if (err) {
-      console.error("❌ Ошибка записи в БД:", err);
+  // Проверка на существование заявки с таким email
+  const checkSql = `SELECT * FROM applications WHERE email = $1`;
+  db.query(checkSql, [email], (checkErr, result) => {
+    if (checkErr) {
+      console.error("❌ Ошибка при проверке email в БД:", checkErr);
       return res.status(500).json({ error: "Ошибка сервера" });
     }
 
-    res.json({ message: "Заявка принята!" });
+    if (result.rows.length > 0) {
+      return res.status(400).json({ error: "На эту почту уже была подана заявка." });
+    }
 
-    const mailOptions = {
-      from: config.smtp.user,
-      to: email,
-      subject: "Подтверждение заявки",
-      text: `Здравствуйте, ${name}!\n\nВаша заявка принята.\n\nДетали:\n- Адрес: ${address}\n- Телефон: ${number}\n- Описание: ${description}\n\nМы свяжемся с вами.\n\nС уважением, команда.`,
-    };
+    // Если email не найден — добавляем заявку
+    const insertSql = `
+      INSERT INTO applications (name, email, number, address, description)
+      VALUES ($1, $2, $3, $4, $5)
+    `;
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("❌ Ошибка отправки письма:", error);
-      } else {
-        console.log("📩 Письмо отправлено:", info.response);
+    db.query(insertSql, [name, email, number, address, description], (err) => {
+      if (err) {
+        console.error("❌ Ошибка записи в БД:", err);
+        return res.status(500).json({ error: "Ошибка сервера" });
       }
+
+      res.json({ message: "Заявка принята!" });
+
+      const mailOptions = {
+        from: config.smtp.user,
+        to: email,
+        subject: "Подтверждение заявки",
+        text: `Здравствуйте, ${name}!\n\nВаша заявка принята.\n\nДетали:\n- Адрес: ${address}\n- Телефон: ${number}\n- Описание: ${description}\n\nМы свяжемся с вами.\n\nС уважением, команда.`,
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error("❌ Ошибка отправки письма:", error);
+        } else {
+          console.log("📩 Письмо отправлено:", info.response);
+        }
+      });
     });
   });
 });
