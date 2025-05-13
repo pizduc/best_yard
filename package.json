@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"node setupDatabase.js && vite\" \"node server.js\"",
+    "setup-db": "node setupDatabase.js",
+    "dev": "node server.js\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
