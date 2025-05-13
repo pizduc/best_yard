@@ -14,7 +14,7 @@ const client = new Client({
 });
 
 const sql = `
-  CREATE TABLE IF NOT EXISTS applications (
+    CREATE TABLE IF NOT EXISTS applications (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     number VARCHAR(50) NOT NULL,
@@ -22,6 +22,20 @@ const sql = `
     address TEXT NOT NULL,
     description TEXT NOT NULL,
     date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS email_verification2 (
+    user_id UUID PRIMARY KEY,
+    email TEXT NOT NULL,
+    code TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS votes (
+    user_id UUID,
+    project_id INTEGER,
+    voted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, project_id)
   );
 `;
 
