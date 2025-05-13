@@ -292,7 +292,7 @@ app.post("/api/email/send-code2", async (req, res) => {
 
   // Сохранение кода в базу данных
   await db.query(
-    `INSERT INTO email_verification (user_id, email, code) VALUES ($1, $2, $3)`,
+    `INSERT INTO email_verification2 (user_id, email, code) VALUES ($1, $2, $3)`,
     [userId, email, code]
   );
 
