@@ -224,6 +224,7 @@ app.post("/api/email/verify-and-vote", async (req, res) => {
   try {
     await client.query("BEGIN");
 
+    // Проверка кода по userId (UUID) в базе данных
     const { rows } = await client.query(
       `SELECT code, created_at FROM email_verification2 WHERE user_id = $1`,
       [userId]
