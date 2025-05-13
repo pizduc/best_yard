@@ -226,7 +226,7 @@ app.post("/api/email/verify-and-vote", async (req, res) => {
 
     const { rows } = await client.query(
       `SELECT code, created_at FROM email_verification2 WHERE user_id = $1`,
-      [userId] // теперь это email
+      [userId]
     );
 
     if (rows.length === 0) {
@@ -247,14 +247,15 @@ app.post("/api/email/verify-and-vote", async (req, res) => {
       return res.status(400).json({ error: "Неверный код" });
     }
 
+    // Проверка, голосовал ли пользователь уже за ЛЮБОЙ проект
     const voteCheck = await client.query(
-      `SELECT * FROM votes WHERE user_id = $1 AND project_id = $2`,
-      [userId, projectId]
+      `SELECT * FROM votes WHERE user_id = $1`,
+      [userId]
     );
 
     if (voteCheck.rows.length > 0) {
       await client.query("ROLLBACK");
-      return res.status(400).json({ error: "Вы уже голосовали за этот проект" });
+      return res.status(400).json({ error: "С этого email уже был отдан голос" });
     }
 
     await client.query(
