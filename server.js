@@ -225,7 +225,7 @@ app.post("/api/email/verify-and-vote", async (req, res) => {
     await client.query("BEGIN");
 
     const { rows } = await client.query(
-      `SELECT code, created_at FROM email_verification WHERE user_id = $1`,
+      `SELECT code, created_at FROM email_verification2 WHERE user_id = $1`,
       [userId]
     );
 
@@ -265,7 +265,7 @@ app.post("/api/email/verify-and-vote", async (req, res) => {
     );
 
     // Удаляем запись верификации
-    await client.query(`DELETE FROM email_verification WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM email_verification2 WHERE user_id = $1`, [userId]);
 
     await client.query("COMMIT");
     res.json({ message: "Голос засчитан!" });
