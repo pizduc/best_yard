@@ -8,6 +8,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import config from "./config.js"; // Подключаем конфиг
 import moment from 'moment';
+import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
 
