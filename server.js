@@ -212,6 +212,107 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+app.post("/api/email/verify-and-vote", async (req, res) => {
+  const { userId, code, projectId } = req.body;
+
+  if (!userId || !code || !projectId) {
+    return res.status(400).json({ error: "userId, code и projectId обязательны" });
+  }
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows } = await client.query(
+      `SELECT code, created_at FROM email_verification WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Код не найден" });
+    }
+
+    const { code: storedCode, created_at } = rows[0];
+    const expired = new Date(created_at) < new Date(Date.now() - 10 * 60 * 1000);
+
+    if (expired) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Код истёк" });
+    }
+
+    if (storedCode.trim() !== code.trim()) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Неверный код" });
+    }
+
+    // Проверка: уже голосовал?
+    const voteCheck = await client.query(
+      `SELECT * FROM votes WHERE user_id = $1 AND project_id = $2`,
+      [userId, projectId]
+    );
+
+    if (voteCheck.rows.length > 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Вы уже голосовали за этот проект" });
+    }
+
+    // Сохраняем голос
+    await client.query(
+      `INSERT INTO votes (user_id, project_id) VALUES ($1, $2)`,
+      [userId, projectId]
+    );
+
+    // Удаляем запись верификации
+    await client.query(`DELETE FROM email_verification WHERE user_id = $1`, [userId]);
+
+    await client.query("COMMIT");
+    res.json({ message: "Голос засчитан!" });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Ошибка при подтверждении и голосовании:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  } finally {
+    client.release();
+  }
+});
+
+// API: Отправить код на email
+app.post("/api/email/send-code2", async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: "Не указан email" });
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString(); // Генерация случайного кода
+
+  const userId = uuidv4(); // Уникальный идентификатор пользователя
+
+  // Сохранение кода в базу данных
+  await db.query(
+    `INSERT INTO email_verification (user_id, email, code) VALUES ($1, $2, $3)`,
+    [userId, email, code]
+  );
+
+  // Отправка кода на почту
+  const mailOptions = {
+    from: config.smtp.user,
+    to: email,
+    subject: "Ваш код для подтверждения",
+    text: `Ваш код для подтверждения: ${code}`,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error("❌ Ошибка при отправке письма:", error);
+      return res.status(500).json({ error: "Ошибка отправки письма" });
+    }
+
+    console.log("📩 Письмо отправлено:", info.response);
+    res.json({ message: "Код отправлен на email" });
+  });
+});
 
 // Пример API для получения данных пользователя по лицевому счету
 app.post('/api/getUserAddress', async (req, res) => {
