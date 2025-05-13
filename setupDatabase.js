@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import pkg from 'pg';
 const { Client } = pkg;
 
@@ -7,11 +10,8 @@ const client = new Client({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  ssl: {
-    rejectUnauthorized: false // <-- обязательно для Render!
-  }
+  ssl: { rejectUnauthorized: false }, // всегда использовать SSL
 });
-
 
 const sql = `
   CREATE TABLE IF NOT EXISTS applications (
@@ -29,9 +29,9 @@ async function setup() {
   try {
     await client.connect();
     await client.query(sql);
-    console.log("Таблица успешно создана в PostgreSQL!");
+    console.log("✅ Таблица успешно создана в PostgreSQL!");
   } catch (err) {
-    console.error("Ошибка при создании таблицы:", err);
+    console.error("❌ Ошибка при создании таблицы:", err);
   } finally {
     await client.end();
   }
