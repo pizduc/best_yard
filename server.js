@@ -26,7 +26,6 @@ app.use(cors({
   allowedHeaders: ["Content-Type"],
 }));
 
-
 // Настройка для обработки JSON
 app.use(express.json());
 
@@ -48,6 +47,26 @@ const transporter = nodemailer.createTransport({
     user: config.smtp.user,
     pass: config.smtp.pass,
   },
+});
+
+app.get("/api/votes/count/:projectId", async (req, res) => {
+  const { projectId } = req.params;
+
+  if (!projectId) {
+    return res.status(400).json({ error: "projectId обязателен" });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `SELECT COUNT(*) AS vote_count FROM votes WHERE project_id = $1`,
+      [projectId]
+    );
+
+    res.json({ projectId, voteCount: parseInt(rows[0].vote_count, 10) });
+  } catch (err) {
+    console.error("Ошибка при подсчёте голосов:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
 });
 
 // API: Приём заявок
