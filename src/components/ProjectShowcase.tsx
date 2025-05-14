@@ -121,7 +121,7 @@ useEffect(() => {
           </span>
 
           <h2 className="text-3xl md:text-4xl font-bold mt-4">
-            Реализованные проекты по благоустройству
+            Проекты по благоустройству
           </h2>
 
           <p className="text-lg text-muted-foreground mt-4">
