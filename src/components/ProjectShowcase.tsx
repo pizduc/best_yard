@@ -30,7 +30,6 @@ const ProjectShowcase = () => {
       description: 'Комплексное озеленение с созданием зон отдыха и детской площадки, установкой скамеек и освещения.',
       image: 'https://images.cdn-cian.ru/images/6/694/257/yuzhnyy-kemerovo-jk-752496632-6.jpg',
       year: 2023,
-      isWinner: true,
       link: 'https://южный-кемерово.рф/',
     },
     {
@@ -58,7 +57,6 @@ const ProjectShowcase = () => {
       description: 'Создание ландшафтных композиций, обновление дорожек и установка современного освещения.',
       image: 'https://images.cdn-cian.ru/images/parkovyy-kemerovo-jk-2328802522-7.jpg',
       year: 2022,
-      isWinner: true,
       link: 'https://жк-парковый.рф/?utm_source=yandex&utm_medium=cpc&utm_medium=cpc&utm_campaign=parkovyj_poisk&utm_content=16900450506&utm_term=---autotargeting&roistat=direct8_search_16900450506_---autotargeting&roistat_referrer=none&roistat_pos=premium_2&yclid=4683006103704829951',
     },
     {
@@ -77,7 +75,6 @@ const ProjectShowcase = () => {
       description: 'Применение экологичных материалов, создание вертикального озеленения и точек раздельного сбора мусора.',
       image: 'https://avatars.mds.yandex.net/get-altay/11277832/2a00000192adf71c0e854d1ea9ac52e07413/XXXL',
       year: 2021,
-      isWinner: true,
       link: 'https://www.progrand.ru/projects/vb2q/',
     },
   ];
