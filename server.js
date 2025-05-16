@@ -107,18 +107,18 @@ app.post("/api/projects/add", upload.array("images"), async (req, res) => {
     const images = req.files;
 
     // Вставка проекта
-    const [result] = await db.query(
-      "INSERT INTO projects (title, address, description, year, link) VALUES (?, ?, ?, ?, ?)",
-      [title, address, description, year, link]
+    const result = await db.query(
+      "INSERT INTO projects (title, address, description, year, link) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+      [title, address, description, parseInt(year), link]
     );
 
-    const projectId = result.insertId;
+    const projectId = result.rows[0].id;
 
     // Вставка изображений
     for (const file of images) {
       const imagePath = `/uploads/projects/${file.filename}`;
       await db.query(
-        "INSERT INTO project_images (project_id, image_url) VALUES (?, ?)",
+        "INSERT INTO project_images (project_id, image_url) VALUES ($1, $2)",
         [projectId, imagePath]
       );
     }
