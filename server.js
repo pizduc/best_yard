@@ -7,8 +7,7 @@ import axios from "axios";
 import path from "path";
 import { fileURLToPath } from "url";
 import config from "./config.js"; // Подключаем конфиг
-import moment from 'moment';
-import { v4 as uuidv4 } from 'uuid';
+import multer from "multer";
 
 dotenv.config();
 
@@ -18,6 +17,16 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const db = new Pool(config.db);
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/"); // папка для сохранения файлов
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
 
 // Настройки CORS
 app.use(cors({
@@ -47,6 +56,99 @@ const transporter = nodemailer.createTransport({
     user: config.smtp.user,
     pass: config.smtp.pass,
   },
+});
+
+app.post("/api/projects/mark-winners", async (req, res) => {
+  try {
+    // Сначала сбрасываем всех победителей
+    await db.query(`UPDATE projects SET is_winner = false`);
+
+    // Назначаем победителей
+    await db.query(`
+      UPDATE projects
+      SET is_winner = true
+      WHERE id IN (
+        SELECT id FROM (
+          SELECT p2.id
+          FROM projects p2
+          JOIN votes v ON p2.id = v.project_id
+          GROUP BY p2.year, p2.id
+          HAVING COUNT(v.id) = (
+            SELECT MAX(vote_count) FROM (
+              SELECT COUNT(v2.id) AS vote_count
+              FROM projects p3
+              JOIN votes v2 ON p3.id = v2.project_id
+              WHERE p3.year = p2.year
+              GROUP BY p3.id
+            ) AS year_votes
+          )
+        ) AS winners_per_year
+      );
+    `);
+
+    res.json({ message: "Победители обновлены" });
+  } catch (err) {
+    console.error("Ошибка при обновлении победителей:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
+});
+
+app.post("/api/projects/add", upload.array("images"), async (req, res) => {
+  try {
+    const { title, address, description, year, link } = req.body;
+    const images = req.files;
+
+    // Вставка проекта
+    const [result] = await db.query(
+      "INSERT INTO projects (title, address, description, year, link) VALUES (?, ?, ?, ?, ?)",
+      [title, address, description, year, link]
+    );
+
+    const projectId = result.insertId;
+
+    // Вставка изображений
+    for (const file of images) {
+      const imagePath = `/uploads/projects/${file.filename}`;
+      await db.query(
+        "INSERT INTO project_images (project_id, image_url) VALUES (?, ?)",
+        [projectId, imagePath]
+      );
+    }
+
+    res.status(200).json({ message: "Проект добавлен успешно" });
+  } catch (error) {
+    console.error("Ошибка при добавлении проекта:", error);
+    res.status(500).json({ error: "Ошибка сервера при добавлении проекта" });
+  }
+});
+
+app.get("/api/projects/winners", async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT p.*, vote_counts.vote_count FROM projects p
+      JOIN (
+        SELECT p2.year, p2.id, COUNT(v.id) AS vote_count
+        FROM projects p2
+        JOIN votes v ON p2.id = v.project_id
+        GROUP BY p2.year, p2.id
+      ) AS vote_counts
+      ON p.id = vote_counts.id
+      WHERE (p.year, vote_counts.vote_count) IN (
+        SELECT year, MAX(vote_count) FROM (
+          SELECT p2.year, p2.id, COUNT(v.id) AS vote_count
+          FROM projects p2
+          JOIN votes v ON p2.id = v.project_id
+          GROUP BY p2.year, p2.id
+        ) AS yearly_votes
+        GROUP BY year
+      );
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Ошибка при получении победителей:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
 });
 
 app.get("/api/votes/count/:projectId", async (req, res) => {
