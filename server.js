@@ -66,38 +66,33 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-app.post("/api/projects/mark-winners", async (req, res) => {
+app.get("/api/projects", async (req, res) => {
   try {
-    // Сначала сбрасываем всех победителей
-    await db.query(`UPDATE projects SET is_winner = false`);
+    // Получаем все проекты
+    const projectResult = await db.query("SELECT * FROM projects ORDER BY year DESC");
 
-    // Назначаем победителей
-    await db.query(`
-      UPDATE projects
-      SET is_winner = true
-      WHERE id IN (
-        SELECT id FROM (
-          SELECT p2.id
-          FROM projects p2
-          JOIN votes v ON p2.id = v.project_id
-          GROUP BY p2.year, p2.id
-          HAVING COUNT(v.id) = (
-            SELECT MAX(vote_count) FROM (
-              SELECT COUNT(v2.id) AS vote_count
-              FROM projects p3
-              JOIN votes v2 ON p3.id = v2.project_id
-              WHERE p3.year = p2.year
-              GROUP BY p3.id
-            ) AS year_votes
-          )
-        ) AS winners_per_year
-      );
-    `);
+    const projects = projectResult.rows;
 
-    res.json({ message: "Победители обновлены" });
-  } catch (err) {
-    console.error("Ошибка при обновлении победителей:", err);
-    res.status(500).json({ error: "Ошибка сервера" });
+    // Для каждого проекта получаем изображения
+    const projectsWithImages = await Promise.all(
+      projects.map(async (project) => {
+        const imagesResult = await db.query(
+          "SELECT image_url FROM project_images WHERE project_id = $1",
+          [project.id]
+        );
+
+        return {
+          ...project,
+          image: imagesResult.rows[0]?.image_url || '', // первое изображение для отображения карточки
+          images: imagesResult.rows.map((img) => img.image_url), // массив всех изображений
+        };
+      })
+    );
+
+    res.json(projectsWithImages);
+  } catch (error) {
+    console.error("Ошибка при получении проектов:", error);
+    res.status(500).json({ error: "Ошибка сервера при получении проектов" });
   }
 });
 
