@@ -28,6 +28,8 @@ const storage = multer.diskStorage({
   },
 });
 
+const upload = multer({ storage });
+
 // Настройки CORS
 app.use(cors({
   origin: ["https://region42.onrender.com", "http://localhost:8080"], // явно указываешь допустимый фронт
