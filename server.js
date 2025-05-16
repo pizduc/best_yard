@@ -36,6 +36,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Настройки CORS
 app.use(cors({
   origin: ["https://region42.onrender.com", "http://localhost:8080"], // явно указываешь допустимый фронт
