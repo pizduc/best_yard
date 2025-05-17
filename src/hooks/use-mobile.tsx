@@ -236,24 +236,35 @@ export function useIsMobile() {
 
   React.useEffect(() => {
     const detectMobile = () => {
-      // Using both media query and screen size for better accuracy
+      // Используем и медиа-запрос и размер экрана для большей точности
       const byWidth = window.innerWidth < MOBILE_BREAKPOINT;
       
-      // Detect if user agent suggests a mobile device
+      // Определяем, указывает ли user agent на мобильное устройство
       const byUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
       );
       
-      // Combine both checks for better accuracy
-      setIsMobile(byWidth || byUserAgent);
+      // Учитываем также ориентацию для точного определения мобильных устройств в вертикали
+      const isPortrait = window.innerHeight > window.innerWidth;
+      
+      // Объединяем проверки для лучшей точности, с приоритетом на вертикальную ориентацию
+      setIsMobile(isPortrait ? (byWidth || byUserAgent) : byWidth);
     };
     
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
     mql.addEventListener("change", detectMobile);
     
+    // Добавляем прослушивание изменения ориентации экрана
+    window.addEventListener("orientationchange", detectMobile);
+    window.addEventListener("resize", detectMobile);
+    
     detectMobile(); // Initial check
     
-    return () => mql.removeEventListener("change", detectMobile);
+    return () => {
+      mql.removeEventListener("change", detectMobile);
+      window.removeEventListener("orientationchange", detectMobile);
+      window.removeEventListener("resize", detectMobile);
+    };
   }, []);
 
   return !!isMobile;
@@ -264,16 +275,27 @@ export function useIsTablet() {
 
   React.useEffect(() => {
     const detectTablet = () => {
-      // Using screen size for basic detection
+      // Используем размер экрана для базового определения
       const byWidth = window.innerWidth >= MOBILE_BREAKPOINT && 
                       window.innerWidth < TABLET_BREAKPOINT;
       
-      // Use orientation and user agent as additional signals
-      const isTabletOrientation = window.innerWidth < window.innerHeight;
+      // Используем ориентацию и user agent как дополнительные сигналы
+      const isTabletOrientation = window.innerHeight < window.innerWidth;
       const isTabletUserAgent = /iPad|Android(?!.*Mobile)|Tablet/i.test(navigator.userAgent);
       
-      // Combine checks with priority on width-based detection
-      setIsTablet(byWidth || (isTabletOrientation && isTabletUserAgent));
+      // В портретной ориентации приоритет даём ширине и user agent
+      const isPortrait = window.innerHeight > window.innerWidth;
+      
+      // Комбинируем проверки с приоритетом на определение по ширине
+      if (isPortrait) {
+        // В портретном режиме также учитываем соотношение сторон для более точного определения
+        const aspectRatio = window.innerWidth / window.innerHeight;
+        const isTabletAspectRatio = aspectRatio > 0.5 && aspectRatio < 0.85;
+        
+        setIsTablet(byWidth || (isTabletAspectRatio && isTabletUserAgent));
+      } else {
+        setIsTablet(byWidth || (isTabletOrientation && isTabletUserAgent));
+      }
     };
     
     const mql = window.matchMedia(
@@ -281,9 +303,17 @@ export function useIsTablet() {
     );
     mql.addEventListener("change", detectTablet);
     
+    // Добавляем прослушивание изменения ориентации экрана
+    window.addEventListener("orientationchange", detectTablet);
+    window.addEventListener("resize", detectTablet);
+    
     detectTablet(); // Initial check
     
-    return () => mql.removeEventListener("change", detectTablet);
+    return () => {
+      mql.removeEventListener("change", detectTablet);
+      window.removeEventListener("orientationchange", detectTablet);
+      window.removeEventListener("resize", detectTablet);
+    };
   }, []);
 
   return !!isTablet;
@@ -296,33 +326,49 @@ export function useDeviceSize() {
 
   React.useEffect(() => {
     const updateDeviceInfo = () => {
-      // Update device size category based on width
+      // Обновляем категорию размера устройства на основе ширины и ориентации
       const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isPortrait = height > width;
       
       let newDeviceSize: 'mobile' | 'tablet' | 'laptop' | 'desktop' = 'desktop';
       
-      if (width < MOBILE_BREAKPOINT) {
-        newDeviceSize = 'mobile';
-      } else if (width < TABLET_BREAKPOINT) {
-        newDeviceSize = 'tablet';
-      } else if (width < LAPTOP_BREAKPOINT) {
-        newDeviceSize = 'laptop';
+      // В портретной ориентации используем более агрессивное определение мобильных устройств
+      if (isPortrait) {
+        const aspectRatio = width / height;
+        
+        if (width < MOBILE_BREAKPOINT || aspectRatio < 0.65) {
+          newDeviceSize = 'mobile';
+        } else if (width < TABLET_BREAKPOINT || (aspectRatio >= 0.65 && aspectRatio < 0.85)) {
+          newDeviceSize = 'tablet';
+        } else if (width < LAPTOP_BREAKPOINT) {
+          newDeviceSize = 'laptop';
+        }
+      } else {
+        // В альбомной ориентации использовать стандартные брейкпоинты
+        if (width < MOBILE_BREAKPOINT) {
+          newDeviceSize = 'mobile';
+        } else if (width < TABLET_BREAKPOINT) {
+          newDeviceSize = 'tablet';
+        } else if (width < LAPTOP_BREAKPOINT) {
+          newDeviceSize = 'laptop';
+        }
       }
       
       setDeviceSize(newDeviceSize);
       
-      // Try to determine the device diagonal
+      // Пытаемся определить диагональ устройства
       const diagonalSize = calculateDevicePhysicalSizeInInches();
       setDeviceDiagonal(diagonalSize);
       
-      // Match to a known device if possible
+      // Сопоставляем с известным устройством, если возможно
       if (diagonalSize) {
-        // Select the appropriate device list based on device type
+        // Выбираем подходящий список устройств в зависимости от типа устройства
         const deviceList = newDeviceSize === 'mobile' || newDeviceSize === 'tablet' 
           ? [...SMARTPHONE_DIAGONALS, ...TABLET_DIAGONALS]
           : [];
           
-        // Find closest match by diagonal size
+        // Находим ближайшее соответствие по размеру диагонали
         if (deviceList.length > 0) {
           const closestDevice = deviceList.reduce((prev, curr) => {
             return Math.abs(curr.size - diagonalSize) < Math.abs(prev.size - diagonalSize)
@@ -330,7 +376,7 @@ export function useDeviceSize() {
               : prev;
           });
           
-          // If we found a reasonably close match
+          // Если мы нашли достаточно близкое соответствие
           if (Math.abs(closestDevice.size - diagonalSize) < 0.5) {
             setDetectedDevice(closestDevice.description);
           } else {
@@ -345,9 +391,13 @@ export function useDeviceSize() {
     };
 
     window.addEventListener('resize', updateDeviceInfo);
+    window.addEventListener('orientationchange', updateDeviceInfo);
     updateDeviceInfo(); // Initial check
     
-    return () => window.removeEventListener('resize', updateDeviceInfo);
+    return () => {
+      window.removeEventListener('resize', updateDeviceInfo);
+      window.removeEventListener('orientationchange', updateDeviceInfo);
+    };
   }, []);
 
   return { 
@@ -357,7 +407,7 @@ export function useDeviceSize() {
   };
 }
 
-// Hook to get the aspect ratio of the device
+// Хук для получения соотношения сторон устройства
 export function useDeviceAspectRatio() {
   const [aspectRatio, setAspectRatio] = React.useState<number | null>(null);
   const [orientation, setOrientation] = React.useState<'portrait' | 'landscape'>('portrait');
@@ -374,10 +424,8 @@ export function useDeviceAspectRatio() {
     };
     
     window.addEventListener('resize', updateAspectRatio);
-    updateAspectRatio(); // Initial check
-    
-    // Listen for orientation changes on mobile devices
     window.addEventListener('orientationchange', updateAspectRatio);
+    updateAspectRatio(); // Initial check
     
     return () => {
       window.removeEventListener('resize', updateAspectRatio);
@@ -388,7 +436,7 @@ export function useDeviceAspectRatio() {
   return { aspectRatio, orientation };
 }
 
-// Hook to get detailed responsive information
+// Хук для получения детальной информации о состоянии отзывчивости
 export function useResponsiveInfo() {
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
