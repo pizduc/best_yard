@@ -26,7 +26,7 @@ const ProjectShowcase = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const years = [2024, 2023, 2022, 2021, 2020];
+  const years = [2025, 2024, 2023, 2022, 2021, 2020];
 
   // Загрузка проектов
   useEffect(() => {
