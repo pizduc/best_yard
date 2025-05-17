@@ -852,19 +852,21 @@ app.post("/api/payments", async (req, res) => {
     }
 
     const insertQuery = `
-      INSERT INTO paid_services (user_id, cold_water, hot_water, electricity, reading_date, sum, payment_method, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-    `;
-    await db.query(insertQuery, [
-      userId,
-      details.cold_water || 0,
-      details.hot_water || 0,
-      details.electricity || 0,
-      readingDate,
-      totalAmount,
-      paymentMethod,
-      JSON.stringify(services)
-    ]);
+  INSERT INTO paid_services 
+  (user_id, cold_water, hot_water, electricity, reading_date, sum, payment_method, services, created_at)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+`;
+
+await db.query(insertQuery, [
+  userId,
+  details.cold_water || 0,
+  details.hot_water || 0,
+  details.electricity || 0,
+  readingDate,
+  totalAmount,
+  paymentMethod,
+  JSON.stringify(services)
+]);
 
     res.json({ success: true, message: "Оплата успешно сохранена" });
   } catch (err) {
