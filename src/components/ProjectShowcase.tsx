@@ -172,14 +172,15 @@ const ProjectShowcase = () => {
               >
                 <div className="relative h-64 overflow-hidden image-shine">
                   <img
-                    src={project.image}
-                    alt={project.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    onError={(e) => {
-                      // Если изображение не загрузилось, используем заглушку
-                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d';
-                    }}
-                  />
+  src={project.image.startsWith('http') ? project.image : `https://${project.image}`}
+  alt={project.title}
+  referrerPolicy="no-referrer"
+  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+  onError={(e) => {
+    console.error("Ошибка загрузки изображения:", project.image);
+    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d';
+  }}
+/>
                   {isWinner && (
                     <div className="absolute top-4 right-4 bg-primary text-white rounded-full py-1 px-3 flex items-center gap-1 text-sm shadow-md">
                       <Award size={16} />
