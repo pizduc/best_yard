@@ -6,13 +6,12 @@ import dotenv from "dotenv";
 import axios from "axios";
 import path from "path";
 import { fileURLToPath } from "url";
-import config from "./config.js"; // Подключаем конфиг
+import config from "./config.js"; 
 import multer from "multer";
 import fs from 'fs';
 
 dotenv.config();
 
-// Получаем путь к текущему файлу и директории
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -26,7 +25,7 @@ if (!fs.existsSync(uploadsDir)) {
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/"); // папка для сохранения файлов
+    cb(null, "uploads/"); 
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -38,17 +37,14 @@ const upload = multer({ storage });
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Настройки CORS
 app.use(cors({
-  origin: ["https://region42.onrender.com", "http://localhost:8080"], // явно указываешь допустимый фронт
+  origin: ["https://region42.onrender.com", "http://localhost:8080"],
   methods: ["GET", "POST", "DELETE"],
   allowedHeaders: ["Content-Type"],
 }));
 
-// Настройка для обработки JSON
 app.use(express.json());
 
-// Подключение к БД
 db.connect((err) => {
   if (err) {
     console.error("❌ Ошибка подключения к БД:", err);
@@ -57,7 +53,6 @@ db.connect((err) => {
   console.log("✅ Подключено к PostgreSQL");
 });
 
-// Настройка отправки почты
 const transporter = nodemailer.createTransport({
   host: config.smtp.host,
   port: config.smtp.port,
@@ -70,12 +65,10 @@ const transporter = nodemailer.createTransport({
 
 app.get("/api/projects", async (req, res) => {
   try {
-    // Получаем все проекты
     const projectResult = await db.query("SELECT * FROM projects ORDER BY year DESC");
 
     const projects = projectResult.rows;
 
-    // Для каждого проекта получаем изображения
     const projectsWithImages = await Promise.all(
       projects.map(async (project) => {
         const imagesResult = await db.query(
@@ -85,8 +78,8 @@ app.get("/api/projects", async (req, res) => {
 
         return {
           ...project,
-          image: imagesResult.rows[0]?.image_url || '', // первое изображение для отображения карточки
-          images: imagesResult.rows.map((img) => img.image_url), // массив всех изображений
+          image: imagesResult.rows[0]?.image_url || '', 
+          images: imagesResult.rows.map((img) => img.image_url), 
         };
       })
     );
@@ -103,7 +96,6 @@ app.post("/api/projects/add", upload.array("images"), async (req, res) => {
     const { title, address, description, year, link } = req.body;
     const images = req.files;
 
-    // Вставка проекта
     const result = await db.query(
       "INSERT INTO projects (title, address, description, year, link) VALUES ($1, $2, $3, $4, $5) RETURNING id",
       [title, address, description, parseInt(year), link]
@@ -111,7 +103,6 @@ app.post("/api/projects/add", upload.array("images"), async (req, res) => {
 
     const projectId = result.rows[0].id;
 
-    // Вставка изображений
     for (const file of images) {
       const imagePath = `/uploads/projects/${file.filename}`;
       await db.query(
@@ -176,7 +167,6 @@ app.get("/api/votes/count/:projectId", async (req, res) => {
   }
 });
 
-// API: Приём заявок
 app.post("/api/applications", (req, res) => {
   const { name, email, number, address, description } = req.body;
 
@@ -184,7 +174,6 @@ app.post("/api/applications", (req, res) => {
     return res.status(400).json({ error: "Все поля должны быть заполнены!" });
   }
 
-  // Проверка на существование заявки с таким email
   const checkSql = `SELECT * FROM applications WHERE email = $1`;
   db.query(checkSql, [email], (checkErr, result) => {
     if (checkErr) {
@@ -196,7 +185,6 @@ app.post("/api/applications", (req, res) => {
       return res.status(400).json({ error: "На эту почту уже была подана заявка." });
     }
 
-    // Если email не найден — добавляем заявку
     const insertSql = `
       INSERT INTO applications (name, email, number, address, description)
       VALUES ($1, $2, $3, $4, $5)
@@ -228,7 +216,6 @@ app.post("/api/applications", (req, res) => {
   });
 });
 
-// API: Подсказки адресов через Яндекс
 app.get("/api/suggest", async (req, res) => {
   const { query, type } = req.query;
 
@@ -254,7 +241,6 @@ app.get("/api/suggest", async (req, res) => {
   }
 });
 
-// API: Подсказки ФИО через Dadata
 app.get("/api/suggest-fio", async (req, res) => {
   const { query } = req.query;
 
@@ -373,7 +359,6 @@ app.post("/api/email/verify-and-vote", async (req, res) => {
       return res.status(400).json({ error: "Неверный код" });
     }
 
-    // Проверка, голосовал ли пользователь уже за ЛЮБОЙ проект
     const voteCheck = await client.query(
       `SELECT * FROM votes WHERE user_id = $1`,
       [userId]
@@ -412,12 +397,11 @@ app.post("/api/email/send-code2", async (req, res) => {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
 
   try {
-    // Удалим старые коды для этой почты (опционально)
     await db.query(`DELETE FROM email_verification2 WHERE user_id = $1`, [email]);
 
     await db.query(
       `INSERT INTO email_verification2 (user_id, email, code) VALUES ($1, $2, $3)`,
-      [email, email, code] // email используется как user_id
+      [email, email, code] 
     );
 
     const mailOptions = {
@@ -442,12 +426,11 @@ app.post("/api/email/send-code2", async (req, res) => {
   }
 });
 
-// Пример API для получения данных пользователя по лицевому счету
 app.post('/api/getUserAddress', async (req, res) => {
   const { accountNumber } = req.body;
   try {
     const user = await User.findOne({ accountNumber });
-    console.log(user); // Логируем данные пользователя
+    console.log(user); 
     if (user) {
       res.json({
         city: user.city,
@@ -463,7 +446,6 @@ app.post('/api/getUserAddress', async (req, res) => {
   }
 });
 
-// ✅ Получение всех новостей
 app.get("/api/news", (req, res) => {
   db.query("SELECT * FROM news ORDER BY created_at DESC", (err, results) => {
     if (err) {
@@ -474,7 +456,6 @@ app.get("/api/news", (req, res) => {
   });
 });
 
-// ✅ Добавление новости (только для specialUser)
 app.post("/api/news", (req, res) => {
   const { title, content, userId, tag } = req.body;
 
@@ -505,16 +486,14 @@ app.post("/api/news", (req, res) => {
   });
 });
 
-// Маршрут для удаления новости
 app.delete("/api/news/:id", (req, res) => {
-  const { id } = req.params;  // Получаем ID новости из параметров URL
-  const { userId } = req.query; // Получаем userId из query-параметра
+  const { id } = req.params; 
+  const { userId } = req.query; 
 
   if (!userId) {
     return res.status(400).json({ error: "Не указан userId" });
   }
 
-  // Проверка, является ли пользователь особым (specialUser)
   const checkUserQuery = "SELECT is_special_user FROM users WHERE user_id = $1";
   db.query(checkUserQuery, [userId], (err, results) => {
     if (err) {
@@ -526,7 +505,6 @@ app.delete("/api/news/:id", (req, res) => {
       return res.status(403).json({ error: "Нет прав на удаление новостей" });
     }
 
-    // Удаление новости из базы данных
     const deleteQuery = "DELETE FROM news WHERE id = $1";
     db.query(deleteQuery, [id], (err) => {
       if (err) {
@@ -549,7 +527,6 @@ app.post('/api/user/profile', async (req, res) => {
   const deleteQuery = 'DELETE FROM user_profiles WHERE user_id = $1';
 
   try {
-    // Удаляем старые данные
     await db.query(deleteQuery, [userId]);
 
     const insertQuery = `
@@ -557,7 +534,6 @@ app.post('/api/user/profile', async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7)
     `;
 
-    // Добавляем новые данные
     await db.query(insertQuery, [userId, lastName, firstName, middleName, phone, email, isEmailVerified || false]);
 
     res.json({ message: 'Данные профиля сохранены' });
@@ -567,7 +543,6 @@ app.post('/api/user/profile', async (req, res) => {
   }
 });
 
-// Получение данных профиля по userId
 app.get("/api/user/profile/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -600,7 +575,6 @@ app.get("/api/user/profile/:userId", async (req, res) => {
   }
 });
 
-// Получение данных пользователя по userId
 app.get("/api/user/addresses/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -627,7 +601,6 @@ app.get("/api/user/addresses/:userId", async (req, res) => {
   }
 });
 
-// ✅ Получение последних показаний
 app.get("/api/meter-readings", async (req, res) => {
   const { userId } = req.query;
 
@@ -655,7 +628,7 @@ app.get("/api/meter-readings", async (req, res) => {
 
     const grouped = {};
     for (const row of rows) {
-      const key = row.reading_date.toISOString().slice(0, 7); // YYYY-MM
+      const key = row.reading_date.toISOString().slice(0, 7); 
       if (!grouped[key]) grouped[key] = row;
     }
 
@@ -676,7 +649,6 @@ app.get("/api/meter-readings", async (req, res) => {
   }
 });
 
-// ✅ Добавление или обновление показаний
 app.post("/api/meter-readings", async (req, res) => {
   const { userId, hotWater, coldWater, electricity, readingDate } = req.body;
 
@@ -684,7 +656,7 @@ app.post("/api/meter-readings", async (req, res) => {
     return res.status(400).json({ error: "Не указан userId или дата показаний" });
   }
 
-  const formattedDate = readingDate.substring(0, 7); // YYYY-MM
+  const formattedDate = readingDate.substring(0, 7); 
 
   try {
     const { rows } = await db.query(`
@@ -694,7 +666,6 @@ app.post("/api/meter-readings", async (req, res) => {
       ORDER BY reading_date DESC
     `, [userId]);
 
-    // Удаляем самые старые, если больше двух
     if (rows.length >= 2) {
       const oldestId = rows[rows.length - 1].id;
       await db.query(`DELETE FROM meter_readings WHERE id = $1`, [oldestId]);
@@ -751,7 +722,6 @@ app.get("/api/calculate-payment", async (req, res) => {
     electricity: 0
   };
 
-  // Преобразуем месяц в формат YYYY-MM
   const monthsMap = {
     января: 1,
     февраля: 2,
@@ -774,10 +744,8 @@ app.get("/api/calculate-payment", async (req, res) => {
   }
   const formattedMonth = `${year}-${monthNumber.toString().padStart(2, "0")}`;
 
-  // Теперь, formattedMonth имеет правильный формат YYYY-MM
-  console.log(formattedMonth); // Для отладки
+  console.log(formattedMonth); 
 
-  // Дальше продолжаем расчёт
   if (selectedServicesArray.includes("heating")) {
     details.heating = tariffs.heating;
     totalAmount += tariffs.heating;
@@ -788,7 +756,7 @@ app.get("/api/calculate-payment", async (req, res) => {
     totalAmount += tariffs.maintenance;
   }
 
-  const prevMonthDate = new Date(Number(year), monthNumber - 2); // Месяц на 1 меньше, т.к. с 0
+  const prevMonthDate = new Date(Number(year), monthNumber - 2); 
   const prevMonth = prevMonthDate.toISOString().slice(0, 7);
 
   try {
@@ -870,7 +838,7 @@ app.post("/api/payments", async (req, res) => {
     return res.status(400).json({ error: "Некорректные данные" });
   }
 
-  const monthStr = readingDate.slice(0, 7); // YYYY-MM
+  const monthStr = readingDate.slice(0, 7); 
 
   try {
     const checkQuery = `
@@ -912,7 +880,6 @@ app.post("/api/save-payment", async (req, res) => {
     return res.status(400).json({ error: "Некорректные данные (отсутствуют обязательные поля)" });
   }
 
-  // Подготовка данных: либо из details, либо из selectedServices
   let coldWater = 0, hotWater = 0, electricity = 0;
 
   if (details) {
@@ -920,7 +887,6 @@ app.post("/api/save-payment", async (req, res) => {
     hotWater = details.hot_water || 0;
     electricity = details.electricity || 0;
   } else if (Array.isArray(selectedServices)) {
-    // Пример: если услуга выбрана — считаем, что её стоимость включена
     coldWater = selectedServices.includes("cold_water") ? 1 : 0;
     hotWater = selectedServices.includes("hot_water") ? 1 : 0;
     electricity = selectedServices.includes("electricity") ? 1 : 0;
@@ -963,7 +929,6 @@ app.get("/api/paid-months", async (req, res) => {
   }
 
   try {
-    // Извлекаем все месяцы с показаниями счетчиков (без учета оплат)
     const readingsQuery = `
       SELECT DISTINCT to_char(reading_date, 'YYYY-MM') AS reading_month
       FROM meter_readings
@@ -973,7 +938,6 @@ app.get("/api/paid-months", async (req, res) => {
     const { rows: readingsRows } = await db.query(readingsQuery, [userId]);
     const readingMonths = readingsRows.map(row => row.reading_month);
 
-    // Извлекаем все месяцы, за которые была произведена оплата
     const paidQuery = `
       SELECT DISTINCT to_char(reading_date, 'YYYY-MM') AS paid_month
       FROM paid_services
@@ -983,7 +947,6 @@ app.get("/api/paid-months", async (req, res) => {
     const { rows: paidRows } = await db.query(paidQuery, [userId]);
     const paidMonths = paidRows.map(row => row.paid_month);
 
-    // Находим месяцы, за которые нет оплаты
     const unpaidMonths = readingMonths.filter(month => !paidMonths.includes(month));
 
     if (unpaidMonths.length === 0) {
@@ -1005,7 +968,6 @@ app.get("/api/unpaid-months", async (req, res) => {
   }
 
   try {
-    // Получаем все оплаченные месяцы для пользователя
     const paidRes = await db.query(
       `SELECT to_char(reading_date, 'YYYY-MM') AS month 
        FROM paid_services 
@@ -1014,7 +976,6 @@ app.get("/api/unpaid-months", async (req, res) => {
     );
     const paidMonths = paidRes.rows.map(row => row.month);
 
-    // Получаем все доступные месяцы из показаний
     const readingsRes = await db.query(
       `SELECT DISTINCT to_char(reading_date, 'YYYY-MM') AS month 
        FROM meter_readings 
@@ -1023,7 +984,6 @@ app.get("/api/unpaid-months", async (req, res) => {
     );
     const allMonths = readingsRes.rows.map(row => row.month);
 
-    // Фильтруем все месяцы, которые не оплачены
     const unpaidMonths = allMonths.filter(month => !paidMonths.includes(month));
 
     res.json({ unpaidMonths });
@@ -1034,7 +994,6 @@ app.get("/api/unpaid-months", async (req, res) => {
   }
 });
 
-// API для подачи заявки
 app.post("/api/applications2", async (req, res) => {
   const { type, description, date, time, phone } = req.body;
 
@@ -1054,7 +1013,6 @@ app.post("/api/applications2", async (req, res) => {
   console.log("Параметры запроса:", params);
 
   try {
-    // Выполняем запрос к базе данных PostgreSQL
     const result = await db.query(sql, params);
     const applicationId = result.rows[0].id;
 
@@ -1111,13 +1069,12 @@ app.post("/api/email/send-code", async (req, res) => {
     return res.status(400).json({ error: "userId и email обязательны" });
   }
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-значный код
+  const code = Math.floor(100000 + Math.random() * 900000).toString(); 
 
   const client = await db.connect();
   try {
-    await client.query('BEGIN'); // Начинаем транзакцию
+    await client.query('BEGIN'); 
 
-    // Вставка или обновление записи в таблице email_verification
     await client.query(`
       INSERT INTO email_verification (user_id, email, code)
       VALUES ($1, $2, $3)
@@ -1125,7 +1082,6 @@ app.post("/api/email/send-code", async (req, res) => {
       SET code = EXCLUDED.code, created_at = CURRENT_TIMESTAMP
     `, [userId, email, code]);
 
-    // Отправка письма
     await transporter.sendMail({
       from: `"Регион 42" <${config.smtp.user}>`,
       to: email,
@@ -1133,14 +1089,14 @@ app.post("/api/email/send-code", async (req, res) => {
       text: `Ваш код подтверждения: ${code}`,
     });
 
-    await client.query('COMMIT'); // Подтверждаем транзакцию
+    await client.query('COMMIT'); 
     res.json({ message: "Код отправлен на email" });
   } catch (err) {
-    await client.query('ROLLBACK'); // Откатываем транзакцию в случае ошибки
+    await client.query('ROLLBACK'); 
     console.error("Ошибка при отправке email:", err);
     res.status(500).json({ error: "Ошибка сервера" });
   } finally {
-    client.release(); // Освобождаем подключение
+    client.release(); 
   }
 });
 
@@ -1152,7 +1108,6 @@ app.post("/api/email/verify", async (req, res) => {
   }
 
   try {
-    // 1. Проверяем, существует ли пользователь с таким userId в users
     const userCheck = await db.query(`
       SELECT user_id FROM users WHERE user_id = $1
     `, [userId]);
@@ -1161,7 +1116,6 @@ app.post("/api/email/verify", async (req, res) => {
       return res.status(400).json({ error: "Пользователь не найден" });
     }
 
-    // 2. Проверка кода в email_verification
     const result = await db.query(`
       SELECT code, created_at FROM email_verification WHERE user_id = $1
     `, [userId]);
@@ -1171,7 +1125,7 @@ app.post("/api/email/verify", async (req, res) => {
     }
 
     const { code: storedCode, created_at } = result.rows[0];
-    const expired = new Date(created_at) < new Date(Date.now() - 10 * 60 * 1000); // 10 минут
+    const expired = new Date(created_at) < new Date(Date.now() - 10 * 60 * 1000); 
 
     if (expired) {
       return res.status(400).json({ error: "Код истёк" });
@@ -1182,7 +1136,6 @@ app.post("/api/email/verify", async (req, res) => {
       return res.status(400).json({ error: "Неверный код" });
     }
 
-    // 3. Обновляем email_verified в user_profiles, если пользователь найден
     const updateResult = await db.query(`
       UPDATE user_profiles SET email_verified = TRUE WHERE user_id = $1 RETURNING email_verified
     `, [userId]);
@@ -1192,7 +1145,6 @@ app.post("/api/email/verify", async (req, res) => {
       return res.status(400).json({ error: "Пользователь не найден в профиле" });
     }
 
-    // 4. Удаляем запись о верификации после успешного подтверждения
     await db.query(`
       DELETE FROM email_verification WHERE user_id = $1
     `, [userId]);
@@ -1208,7 +1160,6 @@ app.post('/api/user/register', async (req, res) => {
   console.log('Запрос на /api/user/register:', req.body);
   const { city, street, house, apartment, contract, accountNumber } = req.body;
 
-  // Проверка обязательных полей
   if (!city || !street || !house || !contract || !accountNumber) {
     return res.status(400).json({
       error: "Пожалуйста, заполните все обязательные поля."
@@ -1279,7 +1230,6 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(buildPath, 'index.html'));
 });
 
-// Старт сервера
 app.listen(config.port, '0.0.0.0', () => {
   console.log(`🚀 Сервер запущен на порту ${config.port}`);
 });
