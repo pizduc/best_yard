@@ -74,7 +74,9 @@ const Footer = () => {
           <div>
             <h4 className="font-medium text-lg mb-4">Документы</h4>
             <ul className="space-y-2">
-              {[{ label: 'Положение о конкурсе', href: '/documents/regulations' }, { label: 'Правила участия', href: '/documents/participation-rules' }, { label: 'Критерии оценки', href: '/documents/evaluation-criteria' }, { label: 'Часто задаваемые вопросы', href: '/documents/faq' }, { label: 'Политика конфиденциальности', href: '/documents/privacy-policy' }].map(
+              {[{ label: 'Положение о конкурсе', href: '/documents/regulations' }, { label: 'Правила участия', href: '/documents/participation-rules' }, 
+              { label: 'Критерии оценки', href: '/documents/evaluation-criteria' }, { label: 'Часто задаваемые вопросы', href: '/documents/faq' }, 
+              { label: 'Политика конфиденциальности', href: '/documents/privacy-policy' }, { label: 'Пользовательское соглашение', href: '/documents/useragreement' }].map(
                 (link, index) => (
                   <li key={index}>
                     <a href={link.href} className="text-white/70 hover:text-white transition-colors block py-1">
