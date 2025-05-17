@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Save, X, Upload } from "lucide-react";
+import axios from "axios";
 
 interface ProjectFormData {
   title: string;
@@ -28,11 +29,44 @@ const ProjectForm = () => {
 
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
+  const [isAddressLoading, setIsAddressLoading] = useState(false);
+
+  const fetchAddressSuggestions = async (query: string) => {
+  setIsAddressLoading(true);
+  try {
+    const response = await axios.get("https://best-yard.onrender.com/api/suggest", {
+      params: { query, type: "geo" },
+    });
+
+    if (response.status === 200) {
+      setAddressSuggestions(response.data.suggestions);
+    } else {
+      setAddressSuggestions([]);
+    }
+  } catch (error) {
+    console.error("Ошибка при получении подсказок адреса:", error);
+    setAddressSuggestions([]);
+  } finally {
+    setIsAddressLoading(false);
+  }
+};
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const { name, value } = e.target;
+  setFormData((prev) => ({ ...prev, [name]: value }));
+
+  if (name === "address" && value.length > 2) {
+    fetchAddressSuggestions(value);
+  } else if (name === "address") {
+    setAddressSuggestions([]);
+  }
+};
+
+  const handleSelectAddress = (suggestion: string) => {
+  setFormData((prev) => ({ ...prev, address: suggestion }));
+  setAddressSuggestions([]);
+};
 
   const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -138,19 +172,33 @@ const ProjectForm = () => {
                 />
               </div>
               
-              <div>
-                <label htmlFor="address" className="block text-sm font-medium mb-1">
-                  Адрес
-                </label>
-                <Input
-                  id="address"
-                  name="address"
-                  placeholder="Например: ул. Дружбы, 28/4"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+              <div className="relative">
+  <label htmlFor="address" className="block text-sm font-medium mb-1">
+    Адрес
+  </label>
+  <Input
+    id="address"
+    name="address"
+    placeholder="Например: ул. Дружбы, 28/4"
+    value={formData.address}
+    onChange={handleInputChange}
+    required
+    autoComplete="off"
+  />
+  {addressSuggestions.length > 0 && (
+    <ul className="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 max-h-48 overflow-y-auto shadow-md w-full">
+      {addressSuggestions.map((suggestion, index) => (
+        <li
+          key={index}
+          onClick={() => handleSelectAddress(suggestion)}
+          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+        >
+          {suggestion}
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
 
               <div>
                 <label htmlFor="link" className="block text-sm font-medium mb-1">
