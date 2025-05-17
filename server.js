@@ -8,7 +8,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import config from "./config.js"; 
 import multer from "multer";
-import fs from 'fs';
 
 dotenv.config();
 
@@ -18,24 +17,18 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const db = new Pool(config.db);
 
-const uploadsDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
+const multer = require("multer");
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/"); 
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
+const storage = multer.memoryStorage(); 
 const upload = multer({ storage });
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
+  endpoint: process.env.AWS_ENDPOINT,
+  s3ForcePathStyle: true, 
+});
 
 app.use(cors({
   origin: ["https://region42.onrender.com", "http://localhost:8080"],
@@ -104,10 +97,21 @@ app.post("/api/projects/add", upload.array("images"), async (req, res) => {
     const projectId = result.rows[0].id;
 
     for (const file of images) {
-      const imagePath = `/uploads/projects/${file.filename}`;
+      const fileName = `${uuidv4()}-${file.originalname}`;
+      const uploadParams = {
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: fileName,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+        ACL: "public-read", 
+      };
+
+      const uploadResult = await s3.upload(uploadParams).promise();
+      const imageUrl = uploadResult.Location; 
+
       await db.query(
         "INSERT INTO project_images (project_id, image_url) VALUES ($1, $2)",
-        [projectId, imagePath]
+        [projectId, imageUrl]
       );
     }
 
@@ -851,7 +855,7 @@ app.post("/api/payments", async (req, res) => {
       return res.status(400).json({ error: "Оплата за этот месяц уже произведена" });
     }
 
-    const insertQuery = `
+        const insertQuery = `
   INSERT INTO paid_services 
   (user_id, cold_water, hot_water, electricity, reading_date, sum, payment_method, services, created_at)
   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
