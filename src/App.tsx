@@ -11,6 +11,8 @@ import ParticipationRules from "./pages/Documents/ParticipationRules";
 import EvaluationCriteria from "./pages/Documents/EvaluationCriteria";
 import FAQ from "./pages/Documents/FAQ";
 import PrivacyPolicy from "./pages/Documents/PrivacyPolicy";
+import Admin from "./pages/Admin";
+import UserAgreement from "./pages/Documents/UserAgreement";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +30,8 @@ const App = () => (
           <Route path="/documents/evaluation-criteria" element={<EvaluationCriteria />} />
           <Route path="/documents/faq" element={<FAQ />} />
           <Route path="/documents/privacy-policy" element={<PrivacyPolicy />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/documents/useragreement" element={<UserAgreement />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
