@@ -106,26 +106,37 @@ const ProjectForm = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (formData.images.length === 0) {
-      toast.error("Пожалуйста, загрузите хотя бы одну фотографию проекта");
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      // В реальном приложении здесь был бы код для отправки данных на сервер
-      // Симулируем задержку для демонстрации
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // В будущем здесь будет запрос к API для сохранения проекта
-      console.log("Отправка данных на сервер:", formData);
-      
+  e.preventDefault();
+
+  if (formData.images.length === 0) {
+    toast.error("Пожалуйста, загрузите хотя бы одну фотографию проекта");
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    const data = new FormData();
+    data.append("title", formData.title);
+    data.append("address", formData.address);
+    data.append("description", formData.description);
+    data.append("year", formData.year.toString());
+    data.append("link", formData.link);
+
+    formData.images.forEach((image) => {
+      data.append("images", image); // 👈 имя должно быть "images" — как на сервере
+    });
+
+    const response = await axios.post("https://best-yard.onrender.com/api/projects/add", data, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    if (response.status === 200) {
       toast.success("Проект успешно добавлен!");
-      
-      // Сброс формы после успешной отправки
+
+      // Очистка формы
       setFormData({
         title: "",
         address: "",
@@ -134,18 +145,19 @@ const ProjectForm = () => {
         link: "",
         images: [],
       });
-      
-      // Очистка превью изображений
-      previewUrls.forEach(url => URL.revokeObjectURL(url));
+
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
       setPreviewUrls([]);
-      
-    } catch (error) {
-      console.error("Ошибка при добавлении проекта:", error);
-      toast.error("Ошибка при добавлении проекта. Попробуйте еще раз.");
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      toast.error("Ошибка при добавлении проекта. Попробуйте ещё раз.");
     }
-  };
+  } catch (error) {
+    console.error("Ошибка при добавлении проекта:", error);
+    toast.error("Ошибка при добавлении проекта. Попробуйте ещё раз.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <Card className="mb-8">
