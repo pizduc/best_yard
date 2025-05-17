@@ -8,6 +8,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import config from "./config.js"; 
 import multer from "multer";
+import AWS from "aws-sdk";
 
 dotenv.config();
 
@@ -16,8 +17,6 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const db = new Pool(config.db);
-
-const multer = require("multer");
 
 const storage = multer.memoryStorage(); 
 const upload = multer({ storage });
