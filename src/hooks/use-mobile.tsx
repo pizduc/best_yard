@@ -232,33 +232,44 @@ export function calculateDevicePhysicalSizeInInches() {
 }
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 
   React.useEffect(() => {
     const detectMobile = () => {
-      // Используем и медиа-запрос и размер экрана для большей точности
+      // Проверяем ширину экрана
       const byWidth = window.innerWidth < MOBILE_BREAKPOINT;
       
-      // Определяем, указывает ли user agent на мобильное устройство
+      // Проверяем user agent на мобильные устройства
       const byUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
       );
       
-      // Учитываем также ориентацию для точного определения мобильных устройств в вертикали
+      // Проверяем конкретно на iPhone
+      const isIphone = /iPhone/i.test(navigator.userAgent);
+      
+      // Определяем ориентацию устройства
       const isPortrait = window.innerHeight > window.innerWidth;
       
-      // Объединяем проверки для лучшей точности, с приоритетом на вертикальную ориентацию
+      // Для iPhone всегда считаем мобильным устройством
+      if (isIphone) {
+        setIsMobile(true);
+        return;
+      }
+      
+      // Для других устройств объединяем проверки
       setIsMobile(isPortrait ? (byWidth || byUserAgent) : byWidth);
     };
     
+    // Слушаем изменения в видимой области
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
     mql.addEventListener("change", detectMobile);
     
-    // Добавляем прослушивание изменения ориентации экрана
+    // Слушаем изменения ориентации
     window.addEventListener("orientationchange", detectMobile);
     window.addEventListener("resize", detectMobile);
     
-    detectMobile(); // Initial check
+    // Начальная проверка
+    detectMobile();
     
     return () => {
       mql.removeEventListener("change", detectMobile);
