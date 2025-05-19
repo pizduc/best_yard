@@ -281,8 +281,13 @@ app.post("/api/login", async (req, res) => {
 
   try {
     if (loginType === "address") {
+      // Проверка обязательных полей
       if (!city || !street || !house || !apartment || !contract) {
-        return res.status(400).json({ error: "Недостаточно данных для входа по адресу" });
+        return res.status(400).json({
+          success: false,
+          error: "Пожалуйста, заполните все поля для входа по адресу.",
+          code: "missing_fields",
+        });
       }
 
       query = `
@@ -293,7 +298,11 @@ app.post("/api/login", async (req, res) => {
 
     } else if (loginType === "account") {
       if (!accountNumber) {
-        return res.status(400).json({ error: "Не указан номер лицевого счёта" });
+        return res.status(400).json({
+          success: false,
+          error: "Укажите номер лицевого счёта.",
+          code: "missing_account_number",
+        });
       }
 
       query = `
@@ -303,14 +312,14 @@ app.post("/api/login", async (req, res) => {
       values = [accountNumber];
 
     } else {
-      return res.status(400).json({ error: "Некорректный тип логина" });
+      return res.status(400).json({
+        success: false,
+        error: "Некорректный тип входа.",
+        code: "invalid_login_type",
+      });
     }
 
-    console.log("SQL-запрос:", query);
-    console.log("Значения:", values);
-
     const result = await db.query(query, values);
-    console.log("Результаты запроса:", result.rows);
 
     if (result.rows.length > 0) {
       const user = result.rows[0];
@@ -320,12 +329,21 @@ app.post("/api/login", async (req, res) => {
         isSpecialUser: Boolean(user.is_special_user),
       });
     } else {
-      return res.status(401).json({ success: false, error: "Пользователь не найден" });
+      return res.status(401).json({
+        success: false,
+        error: "Пользователь не найден. Проверьте введённые данные.",
+        code: "user_not_found",
+      });
     }
 
   } catch (err) {
     console.error("Ошибка при логине:", err);
-    return res.status(500).json({ error: "Ошибка сервера при логине", details: err.message });
+    return res.status(500).json({
+      success: false,
+      error: "Внутренняя ошибка сервера при входе.",
+      code: "server_error",
+      details: err.message,
+    });
   }
 });
 
