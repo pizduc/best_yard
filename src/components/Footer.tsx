@@ -20,7 +20,7 @@ const Footer = () => {
   }, []);
 
   const socialLinks = [
-    { name: 'ВКонтакте', href: 'https://vk.com/id457138768, icon: 'vk' },
+    { name: 'ВКонтакте', href: 'https://vk.com/id457138768', icon: 'vk' },
     { name: 'Телеграм', href: 'https://t.me/LeoBonart1', icon: 'telegram' },
   ];
 
