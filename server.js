@@ -1248,10 +1248,10 @@ app.post('/api/user/register', async (req, res) => {
 });
 
 app.post("/api/email/send-receipt", async (req, res) => {
-  const { userId, email, receiptData } = req.body;
-  if (!userId || !email || !receiptData) {
-    return res.status(400).json({ error: "userId, email и receiptData обязательны" });
-  }
+  const { email, receiptData } = req.body;
+if (!email || !receiptData) {
+  return res.status(400).json({ error: "email и receiptData обязательны" });
+}
 
   const client = await db.connect();
   try {
