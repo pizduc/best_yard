@@ -11,7 +11,7 @@ import multer from "multer";
 import AWS from "aws-sdk";
 import { v4 as uuidv4 } from 'uuid';
 import moment from 'moment';
-import { generateReceiptBuffer } from './utils/receiptGenerator.ts';
+import { generateReceiptBuffer } from './utils/generateReceiptBuffer.js';
 
 dotenv.config();
 
@@ -1256,7 +1256,7 @@ app.post("/api/email/send-receipt", async (req, res) => {
   }
 
   try {
-    const pdfBuffer = generateReceiptBuffer(receiptData);
+    const pdfBuffer = await generateReceiptBuffer(receiptData);
 
     await transporter.sendMail({
       from: `"Регион 42" <${config.smtp.user}>`,
