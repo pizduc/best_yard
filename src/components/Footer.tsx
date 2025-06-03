@@ -20,8 +20,8 @@ const Footer = () => {
   }, []);
 
   const socialLinks = [
-    { name: 'ВКонтакте', href: 'https://vk.com/ali_prokop', icon: 'vk' },
-    { name: 'Телеграм', href: 'https://t.me/zxc_ice_latte', icon: 'telegram' },
+    { name: 'ВКонтакте', href: 'https://vk.com/id457138768, icon: 'vk' },
+    { name: 'Телеграм', href: 'https://t.me/LeoBonart1', icon: 'telegram' },
   ];
 
   // Функция для прокрутки к футеру
