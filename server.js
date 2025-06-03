@@ -11,7 +11,7 @@ import multer from "multer";
 import AWS from "aws-sdk";
 import { v4 as uuidv4 } from 'uuid';
 import moment from 'moment';
-import PDFDocument from 'pdfkit';
+import { generateReceiptBuffer } from './utils/receiptGenerator.ts';
 
 dotenv.config();
 
@@ -1250,56 +1250,31 @@ app.post('/api/user/register', async (req, res) => {
 
 app.post("/api/email/send-receipt", async (req, res) => {
   const { email, receiptData } = req.body;
-if (!email || !receiptData) {
-  return res.status(400).json({ error: "email и receiptData обязательны" });
-}
 
-  const client = await db.connect();
+  if (!email || !receiptData) {
+    return res.status(400).json({ error: "email и receiptData обязательны" });
+  }
+
   try {
-    await client.query('BEGIN');
+    const pdfBuffer = generateReceiptBuffer(receiptData);
 
-    const doc = new PDFDocument();
-    let buffers = [];
-
-    doc.on("data", buffers.push.bind(buffers));
-    doc.on("end", async () => {
-      const pdfData = Buffer.concat(buffers);
-
-      try {
-        await transporter.sendMail({
-          from: `"Регион 42" <${config.smtp.user}>`,
-          to: email,
-          subject: "Ваш чек об оплате",
-          text: "Во вложении находится чек за оплату ЖКХ.",
-          attachments: [
-            {
-              filename: "receipt.pdf",
-              content: pdfData,
-            },
-          ],
-        });
-
-        await client.query('COMMIT');
-        res.json({ message: "Чек отправлен на email" });
-      } catch (emailErr) {
-        await client.query('ROLLBACK');
-        console.error("Ошибка отправки письма:", emailErr);
-        res.status(500).json({ error: "Ошибка отправки письма" });
-      }
+    await transporter.sendMail({
+      from: `"Регион 42" <${config.smtp.user}>`,
+      to: email,
+      subject: "Ваш чек об оплате",
+      text: "Во вложении находится чек за оплату ЖКХ.",
+      attachments: [
+        {
+          filename: `chek_${receiptData.receiptNumber}.pdf`,
+          content: pdfBuffer,
+        },
+      ],
     });
 
-    doc.fontSize(18).text("Квитанция об оплате", { align: "center" });
-    doc.moveDown();
-    Object.entries(receiptData).forEach(([key, value]) => {
-      doc.fontSize(12).text(`${key}: ${value}`);
-    });
-    doc.end();
+    res.json({ message: "Чек отправлен на email" });
   } catch (err) {
-    await client.query('ROLLBACK');
-    console.error("Ошибка при генерации PDF:", err);
-    res.status(500).json({ error: "Ошибка сервера" });
-  } finally {
-    client.release();
+    console.error("Ошибка при отправке чека:", err);
+    res.status(500).json({ error: "Ошибка при отправке чека" });
   }
 });
 
