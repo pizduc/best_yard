@@ -11,7 +11,7 @@ import multer from "multer";
 import AWS from "aws-sdk";
 import { v4 as uuidv4 } from 'uuid';
 import moment from 'moment';
-import { generateReceiptBuffer } from './utils/generateReceiptBuffer.js';
+import { generateReceiptBuffer } from './src/utils/generateReceiptBuffer.js';
 
 dotenv.config();
 
