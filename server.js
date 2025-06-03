@@ -1247,6 +1247,61 @@ app.post('/api/user/register', async (req, res) => {
   }
 });
 
+app.post("/api/email/send-receipt", async (req, res) => {
+  const { userId, email, receiptData } = req.body;
+  if (!userId || !email || !receiptData) {
+    return res.status(400).json({ error: "userId, email и receiptData обязательны" });
+  }
+
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    const doc = new PDFDocument();
+    let buffers = [];
+
+    doc.on("data", buffers.push.bind(buffers));
+    doc.on("end", async () => {
+      const pdfData = Buffer.concat(buffers);
+
+      try {
+        await transporter.sendMail({
+          from: `"Регион 42" <${config.smtp.user}>`,
+          to: email,
+          subject: "Ваш чек об оплате",
+          text: "Во вложении находится чек за оплату ЖКХ.",
+          attachments: [
+            {
+              filename: "receipt.pdf",
+              content: pdfData,
+            },
+          ],
+        });
+
+        await client.query('COMMIT');
+        res.json({ message: "Чек отправлен на email" });
+      } catch (emailErr) {
+        await client.query('ROLLBACK');
+        console.error("Ошибка отправки письма:", emailErr);
+        res.status(500).json({ error: "Ошибка отправки письма" });
+      }
+    });
+
+    doc.fontSize(18).text("Квитанция об оплате", { align: "center" });
+    doc.moveDown();
+    Object.entries(receiptData).forEach(([key, value]) => {
+      doc.fontSize(12).text(`${key}: ${value}`);
+    });
+    doc.end();
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error("Ошибка при генерации PDF:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  } finally {
+    client.release();
+  }
+});
+
 const buildPath = path.resolve(__dirname, './dist');
 
 app.use(express.static(buildPath));
