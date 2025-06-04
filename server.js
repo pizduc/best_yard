@@ -1280,7 +1280,7 @@ app.post("/api/email/send-receipt", async (req, res) => {
 
 app.get('/api/repair-requests', async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM repair_requests');
+    const result = await db.query('SELECT * FROM applications2');
     res.json(result.rows);
   } catch (error) {
     console.error("Ошибка при получении заявок:", error);
@@ -1298,7 +1298,7 @@ app.patch('/api/repair-requests/:id', async (req, res) => {
 
   try {
     const result = await db.query(
-      `UPDATE repair_requests SET completed = $1, steps = $2 WHERE id = $3`,
+      `UPDATE applications2 SET completed = $1, steps = $2 WHERE id = $3`,
       [completed, JSON.stringify(steps), id]
     );
 
@@ -1323,7 +1323,7 @@ app.delete('/api/repair-requests/:id', async (req, res) => {
 
   try {
     const result = await db.query(
-      `DELETE FROM repair_requests WHERE id = $1`,
+      `DELETE FROM applications2 WHERE id = $1`,
       [id]
     );
 
