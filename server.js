@@ -1278,6 +1278,56 @@ app.post("/api/email/send-receipt", async (req, res) => {
   }
 });
 
+app.patch('/api/repair-requests/:id', async (req, res) => {
+  const { id } = req.params;
+  const { completed, steps, userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ success: false, message: "userId is required" });
+  }
+
+  try {
+    const [result] = await db.execute(
+      `UPDATE repair_requests SET completed = ?, steps = ? WHERE id = ?`,
+      [completed, JSON.stringify(steps), id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "Заявка не найдена" });
+    }
+
+    return res.json({ success: true, message: "Статус заявки и этапы обновлены" });
+  } catch (error) {
+    console.error("Ошибка при обновлении заявки:", error);
+    return res.status(500).json({ success: false, message: "Ошибка сервера" });
+  }
+});
+
+app.delete('/api/repair-requests/:id', async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.query;
+
+  if (!userId) {
+    return res.status(400).json({ success: false, message: "userId is required" });
+  }
+
+  try {
+    const [result] = await db.execute(
+      `DELETE FROM repair_requests WHERE id = ?`,
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "Заявка не найдена" });
+    }
+
+    return res.json({ success: true, message: "Заявка удалена" });
+  } catch (error) {
+    console.error("Ошибка при удалении заявки:", error);
+    return res.status(500).json({ success: false, message: "Ошибка сервера" });
+  }
+});
+
 const buildPath = path.resolve(__dirname, './dist');
 
 app.use(express.static(buildPath));
