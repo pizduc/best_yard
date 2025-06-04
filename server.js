@@ -1280,8 +1280,8 @@ app.post("/api/email/send-receipt", async (req, res) => {
 
 app.get('/api/repair-requests', async (req, res) => {
   try {
-    const [requests] = await db.execute('SELECT * FROM repair_requests');
-    res.json(requests);
+    const result = await db.query('SELECT * FROM repair_requests');
+    res.json(result.rows);
   } catch (error) {
     console.error("Ошибка при получении заявок:", error);
     res.status(500).json({ success: false, message: "Ошибка сервера" });
@@ -1297,12 +1297,12 @@ app.patch('/api/repair-requests/:id', async (req, res) => {
   }
 
   try {
-    const [result] = await db.execute(
-      `UPDATE repair_requests SET completed = ?, steps = ? WHERE id = ?`,
+    const result = await db.query(
+      `UPDATE repair_requests SET completed = $1, steps = $2 WHERE id = $3`,
       [completed, JSON.stringify(steps), id]
     );
 
-    if (result.affectedRows === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ success: false, message: "Заявка не найдена" });
     }
 
@@ -1322,12 +1322,12 @@ app.delete('/api/repair-requests/:id', async (req, res) => {
   }
 
   try {
-    const [result] = await db.execute(
-      `DELETE FROM repair_requests WHERE id = ?`,
+    const result = await db.query(
+      `DELETE FROM repair_requests WHERE id = $1`,
       [id]
     );
 
-    if (result.affectedRows === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ success: false, message: "Заявка не найдена" });
     }
 
