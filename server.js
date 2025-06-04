@@ -1278,6 +1278,16 @@ app.post("/api/email/send-receipt", async (req, res) => {
   }
 });
 
+app.get('/api/repair-requests', async (req, res) => {
+  try {
+    const [requests] = await db.execute('SELECT * FROM repair_requests');
+    res.json(requests);
+  } catch (error) {
+    console.error("Ошибка при получении заявок:", error);
+    res.status(500).json({ success: false, message: "Ошибка сервера" });
+  }
+});
+
 app.patch('/api/repair-requests/:id', async (req, res) => {
   const { id } = req.params;
   const { completed, steps, userId } = req.body;
