@@ -34,7 +34,7 @@ const s3 = new AWS.S3({
 
 app.use(cors({
   origin: ["https://region42.onrender.com", "http://localhost:8080"],
-  methods: ["GET", "POST", "DELETE"],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ["Content-Type"],
 }));
 
