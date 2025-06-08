@@ -1338,6 +1338,43 @@ app.delete('/api/repair-requests/:id', async (req, res) => {
   }
 });
 
+app.get('/api/tariffs', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM tariffs');
+    if (result.rows.length === 0) {
+      return res.json({ success: false, message: 'Нет сохранённых тарифов' });
+    }
+    return res.json({ success: true, tariffs: result.rows });
+  } catch (error) {
+    console.error('Ошибка при получении тарифов:', error);
+    return res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
+
+app.post('/api/tariffs', async (req, res) => {
+  const { tariffs } = req.body;
+
+  if (!Array.isArray(tariffs)) {
+    return res.status(400).json({ success: false, message: 'Неверный формат данных' });
+  }
+
+  try {
+    const deleteOld = await db.query('DELETE FROM tariffs');
+
+    for (const t of tariffs) {
+      await db.query(
+        'INSERT INTO tariffs (id, name, price, type) VALUES ($1, $2, $3, $4)',
+        [t.id, t.name, t.price, t.type]
+      );
+    }
+
+    return res.json({ success: true, message: 'Тарифы обновлены' });
+  } catch (error) {
+    console.error('Ошибка при сохранении тарифов:', error);
+    return res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
+
 const buildPath = path.resolve(__dirname, './dist');
 
 app.use(express.static(buildPath));
