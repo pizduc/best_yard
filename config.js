@@ -6,10 +6,12 @@ dotenv.config();
 
 const isProduction = process.env.NODE_ENV === "production";
 
-const sslCertPath = path.resolve("prod-ca-2021.crt"); // Файл должен быть в корне проекта
+// Путь к SSL-сертификату (в корне репозитория)
+const sslCertPath = path.resolve(process.cwd(), "prod-ca-2021.crt");
 
 const config = {
   port: process.env.PORT || 10000,
+
   db: {
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT),
@@ -23,16 +25,19 @@ const config = {
         }
       : false,
   },
+
   smtp: {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT),
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+
   apis: {
     dadataApiKey: process.env.DADATA_API_KEY,
     yandexApiKey: process.env.YANDEX_API_KEY,
   },
+
   cors: {
     origins: isProduction
       ? ["https://best-yard.onrender.com"]
