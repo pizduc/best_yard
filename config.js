@@ -6,8 +6,7 @@ dotenv.config();
 
 const isProduction = process.env.NODE_ENV === "production";
 
-// Абсолютный путь к сертификату в корне проекта
-const sslCertPath = path.resolve(process.cwd(), "prod-ca-2021.crt");
+const sslCertPath = path.resolve("prod-ca-2021.crt"); // Файл должен быть в корне проекта
 
 const config = {
   port: process.env.PORT || 10000,
