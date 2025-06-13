@@ -1280,7 +1280,7 @@ app.post("/api/email/send-receipt", async (req, res) => {
 
 app.get('/api/repair-requests', async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM applications2');
+    const result = await db.query('SELECT id, completed, steps, user_id, address_text FROM applications2');
     res.json(result.rows);
   } catch (error) {
     console.error("Ошибка при получении заявок:", error);
